@@ -1,0 +1,274 @@
+## How do the top prey items for MBRA and MMYS relate to their habitat selection? 
+- Get arthropod species habitat use data from Artdatabanken.se
+- Create a habitat column based on the arthropods 
+- Plot the differences in terms of prey abundance and prevalence 
+
+
+```{r}
+
+library(rlang)
+library(cowplot)
+library(tidyverse) #
+library(readxl) #
+library(iNEXT) # 
+library(vegan) #
+library(reshape2) 
+library(ggpubr) # 
+library(cowplot) # 
+library(devtools) #
+library(lme4) 
+library(phyloseq)
+library(plyr)
+library(Rcpp)
+library(vctrs)
+library(metagMisc)
+library(DHARMa)
+library(sjPlot)
+library(effects)
+library(qiime2R)
+library(BiocManager)
+library(patchwork)
+library(microViz)
+library(beepr)
+library(microViz)
+library(mixOmics)
+library(ade4)
+library(nlme)
+library(pals)
+library(RColorBrewer)
+library(MetBrewer)
+library(MASS)
+library(knitr)
+(library(kableExtra))
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/Diet_Myotis_brandts_mystacinus"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "Nittedal_habitat_from_prey_info"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+
+preybats <- read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-11-26/bats_abundance_prevalence_Separate_then_combined.csv")
+# 48765 obs of 23 variables 
+
+```
+
+
+```{r}
+
+# There is one csv file for each Arthropod order, read them all in together
+# 
+# input1 <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/Artfakta.se"
+# 
+# # 
+# artfakta <- list.files(path=input1, pattern=".csv", recursive = TRUE) # 10 files for for 10 orders -
+# # 
+# df <-  lapply(artfakta, function(i){
+#   read.csv(i, sep = ";")})
+# 
+# dfx <- df %>% bind_rows()
+
+#write.csv(dfx, file = file.path(output_today, "BugsCombinedSweden.csv"))
+# output_today
+# [1] "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-18"
+
+
+# araneae <- read.csv(artfakta[1], row.names = NULL, sep = ";")
+# coleoptera <- read.csv(artfakta[2], row.names = NULL, sep = ";")
+# diptera <- read.csv(artfakta[3], row.names = NULL, sep = ";")
+# hemiptera <- read.csv(artfakta[4], row.names = NULL, sep = ";")
+# hymenoptera <- read.csv(artfakta[5], row.names = NULL, sep = ";") 
+# # 1000 ish taxa were cut off - may need to look into this later
+# lepidoptera <- read.csv(artfakta[6], row.names = NULL, sep = ";")
+# neuoptera <- read.csv(artfakta[7], row.names = NULL, sep = ";")
+# orthoptera <- read.csv(artfakta[8], row.names = NULL, sep = ";")
+# psocodea <- read.csv(artfakta[9], row.names = NULL, sep = ";")
+# trichoptera <- read.csv(artfakta[10], row.names = NULL, sep = ";")
+
+
+swbugs <- read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-18/BugsCombinedSweden.csv")
+
+## Which of these have a habitat description? 
+swbugs1 <- swbugs %>% 
+  dplyr::select(Vetenskapligt.namn, Landskapstyp, RedListCategory) %>% 
+  dplyr::rename(Species = Vetenskapligt.namn, habitat = Landskapstyp, status = RedListCategory) 
+
+## Make sure names are unique and remove any taxa that have no habitat info 
+
+swbugs2 <- swbugs1 %>% filter(habitat != "") 
+# 15219
+swbugs3 <- distinct(swbugs2)
+# 11998
+
+# swbugsh <- swbugs1 %>% filter(habitat != "") 
+# summary(swbugsh) #  15219 obs that have some habitat data 
+
+
+## Combine with bat data 
+prey <- dplyr::left_join(preybats, swbugs3, by = "Species") 
+## 48765 obs 
+prey <- prey %>% mutate(habitat = replace_na(habitat, "Unknown"))
+
+## what kind of habitats are included?
+test <- prey %>% mutate(habitat = factor(habitat)) 
+levels(test$habitat)
+
+## check if there are any taxa for which both abundance and prevalence are zero 
+prey_fix <- prey %>% dplyr::filter(Prevalence != 0 & TotalAbundance != 0) 
+# 48765 as well - Nope, good!  
+
+
+prey0 <- prey_fix %>% filter(habitat == "Unknown")
+# 24516 obs for which habitat is unknown 
+
+## How much of this is Hymenoptera? 
+preyH <- prey0 %>% filter(Order == "Hymenoptera") %>% distinct(Species) ## 3 obs ... too generalize taxa to fix  
+
+## Check to see what taxa this includes 
+unknownhabitatprey <- prey0 %>% 
+  dplyr::select(Species, Prevalence, Abundance) %>% 
+  filter(Prevalence >= 2) %>% # Look for prey items with prevalence higher than 2 
+  mutate(Species = factor(Species)) 
+manualfix <- levels(unknownhabitatprey$Species) # 9 prey items that match this 
+manualfix
+# "Helina Genus"             "Pseudatemelia josephinae" "Tipula Genus"             "Tricyphona alticola"      "Ula spp."   
+
+# Export and manually fill in for these species 
+#write.csv(manualfix, file = file.path(output_today, "unknownpreytoassign.csv"))
+#output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-20"
+
+## I manually searched for these prey items plus some others. 
+preyx <- prey %>% 
+  dplyr::mutate(habitat1 = case_when(
+    Species %in% c(
+      "Helina Genus", "Thricops semicinereus") ~ 
+      "(S) (L) (V) (J) (U) (H) (F)",
+    Species %in% c(
+      "Chironomidae Family", "Tricyphona alticola", 
+      "Ula mixta", "Ula spp.") ~ 
+      "(S) (V) (L) (J)",
+    Species %in% c(
+      "Tipula Genus", "Tipula iberica", "Tipulidae Family") ~ 
+      "(S) (V) (L) (J) (U)",
+    Species %in% c(
+      "Nemapogon cloacella", "Hemerobius pini", 
+      "Hemerobius perelegans", "Hemerobius fenestratus",
+      "Neolygus contaminatus", "Neuratelia Genus", 
+      "Pseudatemelia josephinae") ~ 
+      "(S)", 
+    Genus %in% "Rhamphomyia" ~ "(S) (V) (L) (H)",
+    TRUE ~ as.character(habitat)))  
+
+## How many of the prey items belong to the family Empididae? 
+
+Emp <- preyx %>% dplyr::filter(Family == "Empididae") %>%
+  mutate(Species = factor(Species)) %>% droplevels()
+levels(Emp$Species)
+
+table(Emp$Species)
+#  Empididae Family   Hilara quadrifasciata 
+#                      28                      31 
+#       Rhamphomyia Genus  Rhamphomyia geniculata 
+#                      14                      62 
+# Rhamphomyia nigripennis Rhamphomyia umbripennis 
+#                     200                      31 
+
+table(Emp$Species, Emp$habitat1)
+
+
+prey1 <- preyx  %>% 
+  mutate(Agriculture = case_when(
+  str_detect(habitat1, pattern = "(J)") ~ 1, # Agriculture 
+  TRUE ~ 0)) %>% 
+  mutate(Forest = case_when(
+  str_detect(habitat1, pattern = "(S)") ~ 2, # Forest
+  TRUE ~ 0)) %>% 
+  mutate(Fresh_water = case_when(
+  str_detect(habitat1, pattern = "(L)") ~ 3, # Fresh water 
+  TRUE ~ 0)) %>% 
+  mutate(Wetland = case_when(
+  str_detect(habitat1, pattern = "(V)") ~ 4, # Wetland
+  TRUE ~ 0)) %>% 
+  mutate(Mountain = case_when(
+  str_detect(habitat1, pattern = "(F)") ~ 5, # Mountain 
+  TRUE ~ 0)) %>% 
+  mutate(Urban = case_when(
+  str_detect(habitat1, pattern = "Urban") ~ 6, # Urban  
+  TRUE ~ 0)) %>%
+  mutate(Coastal = case_when(
+  str_detect(habitat1, pattern = "(H)") ~ 7, # Coastal  
+  TRUE ~ 0)) %>% 
+  mutate(Unknown = case_when(
+  str_detect(habitat1, pattern = "Unknown") ~ 8,
+  TRUE ~ 0)) 
+
+## All unknown habitats also became calssified as Urban, need to fix this 
+# prey1 <- preyx  %>% 
+#   mutate(Urban1 = case_when(
+#   str_detect(habitat1, pattern = "(U)") ~ 6))  
+
+
+# write.csv(prey1, file = file.path(output_today, "BatPreyDatawHabitat.csv")) 
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-11-26"
+
+  
+
+
+##################################################
+###### Comparing habitat of prey ######
+##################################################
+
+# Prevalence of prey items related back to habitat type - Family 
+  checkthis <- prey1 %>% dplyr::select(Family, Order) %>% distinct() %>% arrange(Order) 
+  listcheck <- as.character(checkthis$Family) %>% unique() # list of 53, good 
+  prey1$Family <- factor(prey1$Family, levels = listcheck) %>% droplevels() 
+  prey1$Order <- factor(prey1$Order) %>% droplevels() # Create a nice pallette with 10 distinct colors
+  
+  test <- prey1 %>% filter(Family == "Empididae") %>% droplevels()
+  
+  ## 63731 prey items 
+
+p <- ggplot() +
+  geom_count(data = prey1, aes(x = Agriculture, y = Family, size = Prevalence), alpha = 0.5, color = "#ff9700") +
+  geom_count(data = prey1, aes(x = Fresh_water, y = Family, size = Prevalence), alpha = 0.5, color = "#0080ff") +
+  geom_count(data = prey1, aes(x = Forest, y = Family, size = Prevalence), alpha = 0.5, color = "forestgreen") +
+  geom_count(data = prey1, aes(x = Wetland, y = Family, size = Prevalence), alpha = 0.5, color = "#3232a2") +
+  geom_count(data = prey1, aes(x = Mountain, y = Family, size = Prevalence), alpha = 0.5, color = "brown") +
+  geom_count(data = prey1, aes(x = Urban, y = Family, size = Prevalence), alpha = 0.5, color = "#8f6e98") +
+  geom_count(data = prey1, aes(x = Coastal, y = Family, size = Prevalence), alpha = 0.5, color = "salmon") +
+  geom_count(data = prey1, aes(x = Unknown, y = Family, size = Prevalence), alpha = 0.5, color = "black") +
+  facet_wrap(~BatSpecies) +
+  theme(strip.text = element_text(face = "italic")) +
+    theme(
+  panel.background = element_rect(fill = "white",
+                                colour = "white",
+                                size = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "#7F7F7F"),
+  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "#7F7F7F")) +
+  xlab("") + ylab("") +
+  scale_size_continuous(range = c(4, 12)) +
+  theme(axis.text.x=element_blank(), 
+        axis.ticks.x= element_blank()) +
+  theme(text = element_text(size = 20)) + 
+  xlim(c(1,8)) +
+  theme(legend.position = "none")
+
+p
+
+```
+

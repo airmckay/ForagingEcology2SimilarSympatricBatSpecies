@@ -1,0 +1,442 @@
+---
+title: "1.CleanFilterDietData"
+output: html_document
+date: "2023-12-01"
+---
+
+```{r setup, include=FALSE, }
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+knitr::opts_chunk$set(eval=FALSE)
+options(kableExtra_view_html = T)
+options(knitr.table.format = "html") 
+library(knitr)
+library(kableExtra)
+```
+
+# Objectives:
+ - Import and filter the dataset (remove low ASVs with low OTU reads)
+ - Address the ASVs that are NA (BLAST unknown sequence and manually update dataset)
+ - Export this dataset as a phyloseq object 
+
+
+## Important: 
+** The data is already normalized via SRS (scaling with ranked subsampling)
+
+This mark down builds on the work flow established in "Diet results post SRS.Rmd" after getting feedback from FH. 
+
+### Prepare work space and load packages
+
+```{r setup, include=FALSE}
+
+##############################################################
+library(rlang)
+library(cowplot)
+library(tidyverse) #
+library(readxl) #
+library(iNEXT) # 
+library(vegan) #
+library(reshape2) 
+library(ggpubr) # 
+library(cowplot) # 
+library(devtools) #
+library(phyloseq)
+library(plyr)
+library(Rcpp)
+library(vctrs)
+library(metagMisc)
+library(lme4)
+library(DHARMa)
+library(sjPlot)
+library(effects)
+library(qiime2R)
+library(BiocManager)
+library(patchwork)
+library(microViz)
+library(beepr)
+library(microViz)
+library(mixOmics)
+library(miaTime)
+library(miaViz)
+library(ade4)
+library(pals)
+library(RColorBrewer)
+library(MetBrewer)
+library(MASS)
+library(knitr)
+library(kableExtra)
+library(colorBlindness)
+library(devtools) 
+library(speedyseq)
+library(microbiome)
+library(microbiomer)
+library(microbiomeutilities)
+library(qiime2R)
+library(netresponse)
+library(rstatix)
+library(vegan)
+library(picante)
+
+
+##############################################################
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/Diet_Myotis_brandts_mystacinus"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "1.CleanFilterDietData"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+```
+
+
+# Import and filter the dataset 
+
+- Remove taxa unknow at the Order level and above (none removed)
+- Remove OTUs with 10 or less sequence reads (729 OTUs removed) * 
+- Remove samples with 600 or less sequence reads (none removed)
+
+```{r}
+
+phylo <- qza_to_phyloseq(
+  features= "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/FromFranz_07.2023/R-scrips/sPLS-DA/bat-feat-tab-clean.qza",  
+  # This file was sent by Franz on 06.09.2023        
+   #it makes sense to use a filtered table, as sPLS-DA can't handle rare features very well
+  taxonomy= "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/FromFranz_07.2023/R-scrips/sPLS-DA/bat-classified-repr-seq.qza", 
+  metadata= "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/FromFranz_07.2023/R-scrips/sPLS-DA/bat-metadata_clean.tsv")
+
+phylo #shows what our physeq object contains
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 3629 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 3629 taxa by 7 taxonomic ranks ]
+
+
+
+sort(colSums(otu_table(phylo))) # 4000 reads per sample 
+
+#we remove all features that are unassigned on the phylum level (none lost)
+phylos <- subset_taxa(phylo, Phylum != "NA")
+
+phylos   #shows what our physeq object contains
+#phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 3629 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 3629 taxa by 7 taxonomic ranks ]
+#now we extract the data we need in the exact format that we need
+
+
+#we remove all features that are unassigned on Order level (none lost)
+phyloseq2 <- subset_taxa(phylo, Order != "NA")
+
+phyloseq2   #shows what our physeq object contains
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 3629 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 3629 taxa by 7 taxonomic ranks ]*
+
+
+batsbugs <- phylo %>%  ps_filter(bat.sp %in% c("MBRA", "MMYS")) 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 2616 taxa and 47 samples ]
+# sample_data() Sample Data:       [ 47 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 2616 taxa by 7 taxonomic ranks ]
+#   
+#Inspect the Phyloseq object:
+  
+  sample_names(batsbugs)
+  rank_names(batsbugs)
+  sample_variables(batsbugs)
+  
+sort(colSums(otu_table(batsbugs)))
+quantile(colSums(otu_table(batsbugs)))
+#   0%  25%  50%  75% 100% 
+# 4000 4000 4000 4000 4000 
+
+
+#Remove OTUs with less than 10 sequence reads 
+batsbugs1 <- prune_taxa(taxa_sums(batsbugs) >= 10, batsbugs) 
+batsbugs
+batsbugs1
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 1887 taxa and 47 samples ]:
+# sample_data() Sample Data:        [ 47 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1887 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+ntaxa(batsbugs1)
+# 2616 - 1887 # 729 taxa lost 
+
+quantile(colSums(otu_table(batsbugs1)))
+#     0%    25%    50%    75%   100% 
+# 3857.0 3934.0 3950.0 3960.5 4000.0 
+
+sort(colSums(otu_table(batsbugs1)))
+
+# Two samples need to be removed that were identified as non-target bat species from the bat species genetic analyses 
+batsbugs2<-subset_samples(batsbugs1, sample.nr != "2" & sample.nr != "46")
+batsbugs2 # 2 samples removed 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 1887 taxa and 45 samples ]
+# sample_data() Sample Data:       [ 45 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 1887 taxa by 7 taxonomic ranks ]
+
+#removed 5 samples, check that this worked: 
+sort(colSums(otu_table(batsbugs2)))
+quantile(colSums(otu_table(batsbugs2)))
+#     0%    25%    50%    75%   100% 
+#   3857   3934   3950   3961    4000  
+
+## Visualize to check: 
+# Compare abundance across of different order of OTUs betwween bat species  
+# 
+# p1 <- plot_bar(batsbugs2, x = "bat.sp", fill = "Order") +
+#                 geom_bar(stat="identity") + 
+#   theme_bw() + ggtitle("OTU > 10 reads, Samples > 600 reads")
+# p1 # 
+
+
+```
+
+
+## Determine what the NA prey items are 
+!! Note !! 
+NCBI BLAST of the one genetic sequence that accounts for 411 ASVs.
+
+Sequence: 
+"AGATATTGGAACTATATATAATATAAAAATAGCTTGATCAGGAATAGTGGGGACTTCTTTAAGTATATTAATTCGAGCTGAATTAGGACATCCTGGGGCATTAATTGGAGATGATCAAATTTATAATGTAATTGTTACTGCTCATGCTTTCATTATAATTTTTTTTATAGTAATACCAATTATAATT"
+
+
+BLAST result: (Ula species, Crane flies) 
+380 of the 411 ASVs were in the Diptera Order:
+
+I assigned 17100 of these reads (380 ASVs) to Ula species but left the rest as unknown orders.
+```{r}
+
+############# Find the NAs 
+
+# Convert Phyloseq object to dataframe
+bbdf = psmelt(batsbugs2)
+dim(bbdf)
+#84915   19
+
+summary(bbdf)
+names(bbdf)
+#  [1] "OTU"            "Sample"         "Abundance"      "sample.nr"      "batch"         
+#  [6] "bat.sp"         "sex"            "year"           "date"           "date.text"     
+# [11] "nanodrop.ngul." "extradctio.run" "Kingdom"        "Phylum"         "Class"         
+# [16] "Order"          "Family"         "Genus"          "Species" 
+
+
+
+bbdf1<- bbdf[is.na(bbdf$Family),] # Create a dataset of only prey items with unknown famillies 
+summary(bbdf1)
+# 18495 obs of NA on at least the family level. 
+
+# But how many unique ASVs? 
+bbdf1$OTU <- as.factor(bbdf1$OTU)
+summary(bbdf1)
+
+
+na_asv <- bbdf1 %>% distinct(OTU, .keep_all=T) 
+# 411 distinct ASV features that are NA 
+# write.csv(na_asv, file=file.path(output_today,"unknown_asvs.csv")) 
+# output_today
+
+## Check which sequences are related to these features
+seqs <- read_qza("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Analysis archive/bat_repr-seq.qza")
+seqs1 <- seqs$data # extract the data with the DNA sequences 
+na_asv$uuid <- na_asv$OTU
+
+na_seq <- cross_join(na_asv, seqs1, copy = TRUE)
+dim(na_seq)
+# 2065686      21
+
+na_seq1 <- na_seq %>% distinct(OTU, .keep_all = TRUE) 
+dim(na_seq)
+#write.csv(na_seq1, file=file.path(output_today,"unknown_asvs_with_sequences.csv")) 
+
+na_seq2 <- na_seq1 %>% dplyr::rename(sequences = x) %>% dplyr::select(OTU, sequences)
+#write.csv(na_seq2, file=file.path(output_today,"unknown_asvs_with_sequences_only.csv"))
+
+test1 <- unique(na_seq2$sequences)
+test1
+## There is just one sequence that is related to all of these features... 
+# "AGATATTGGAACTATATATAATATAAAAATAGCTTGATCAGGAATAGTGGGGACTTCTTTAAGTATATTAATTCGAGCTGAATTAGGACATCCTGGGGCATTAATTGGAGATGATCAAATTTATAATGTAATTGTTACTGCTCATGCTTTCATTATAATTTTTTTTATAGTAATACCAATTATAATT"
+
+# I manually ran this sequence through blastn on the NCBI Blast+ webpage. 
+# The results of the blast are saved :
+# C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Analysis archive/BLASToutput_UnknownNA_taxa.txt
+
+#  So now the next step is to insert the family and genus for Ula spp. for all the missing features. 
+
+# Create a list of all the unknown feature IDs
+unknowns <- as.character(unique(na_seq2$OTU))
+head(unknowns)
+unknowns
+
+
+# Visualize the tax table 
+# suppressPackageStartupMessages(library(microViz))
+#tax_fix_interactive(batsbugs2)
+
+# Clean the tax names 
+batsbugsx <- batsbugs2%>%
+ tax_fix(min_length = 0,
+  unknowns = c("NA"),
+  sep = " ", anon_unique = TRUE,
+  suffix_rank = "classified") # Now any unknown family is labeled by its Order 
+
+# Subset to only include the unknown feature IDs, then change unknown Diptera to Ula spp.
+my_subset <- subset(otu_table(batsbugsx), rownames(otu_table(batsbugsx)) %in% unknowns)
+
+new_physeq <- merge_phyloseq(my_subset, tax_table(batsbugsx), sample_data(batsbugsx))
+new_physeq
+# otu_table()   OTU Table:         [ 411 taxa and 45 samples ]
+# sample_data() Sample Data:       [ 45 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 411 taxa by 7 taxonomic ranks ]
+
+# How many of these are Diptera? 
+dip_new <- subset_taxa(new_physeq, Order == "Diptera")
+dip_new 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 380 taxa and 45 samples ]
+# sample_data() Sample Data:       [ 45 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 380 taxa by 7 taxonomic ranks ]
+## 380 taxa will be assigned to Ula spp. 
+
+test <- ps_melt(dip_new) #17100 reads of Diptera that will be changed to Ula sp. 
+
+unk.prey <- ps_melt(new_physeq) %>% mutate(Order = factor(Order)) %>% distinct()
+summary(unk.prey$Order) 
+    # Araneae     Diptera Hymenoptera Lepidoptera  Neuroptera 
+    #   360       17100         135         855          45 
+# I will be able to assigned 17100 reads of these OTUs to Ula species but will leave the rest as unknown orders. 
+
+new_physeq1 <- new_physeq %>% 
+  mutate_tax_table(
+  Family = case_when(
+  Order  == "Diptera" ~ "Pediciidae", 
+  .default = as.character(Family))) %>% 
+  mutate_tax_table(Genus = case_when(
+  Order  == "Diptera" ~ "Ula",
+  .default = as.character(Genus))) %>% 
+  mutate_tax_table(Species = case_when(
+  Order  == "Diptera" ~ "Ula spp.",
+  .default = as.character(Species)))
+
+new_physeq1 # These are the unknowns 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 411 taxa and 45 samples ]:
+# sample_data() Sample Data:        [ 45 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 411 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+# microbiome::plot_taxa_prevalence(new_physeq1, "Family")
+# 
+# pB <- plot_bar(new_physeq, x = "bat.sp", fill = "Genus") + 
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw() 
+# pB
+# 
+# pB1 <- plot_bar(new_physeq1, x = "bat.sp", fill = "Genus") + 
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw() 
+# pB1
+# 
+# # Large proportion of the unknowns were Ula spp. 
+# pB2 <- plot_bar(new_physeq1, x = "bat.sp", fill = "Species") + 
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw() 
+# pB2
+
+# what were the OTUs we changed in the end? 
+
+altered <- rownames_to_column(as.data.frame(new_physeq1@tax_table@.Data), "OTU")
+altered1 <- altered %>% filter(Family == "Pediciidae") # 380 changed obs! 
+
+nothis <- as.character(unique(altered1$OTU))
+
+# That worked! All the Diptera are now in the family Pediciidae with Genus Ula. 
+
+## Now I just need to merge it back in:
+
+
+oldtax <- rownames_to_column(as.data.frame(batsbugsx@tax_table@.Data), "OTU") %>% 
+  filter(!OTU %in% nothis)  # use the cleaned whole dataset but remove the altered OTUs
+#1507
+
+newtax <- rownames_to_column(as.data.frame(new_physeq1@tax_table@.Data), "OTU") %>% filter(Family == "Pediciidae") # Now have only the data of the edited OTUs
+# 380 obs
+
+mergetax <- merge(newtax, oldtax, all.x = TRUE, all.y = TRUE) #1887 obs
+# 1507+380 = 1887 , good! 
+
+# Now re-insert this data back into the OTU table 
+
+taxmat = as.matrix(mergetax) # also 1887 taxa 
+test <- batsbugsx@tax_table # 1887 taxa 
+
+rownames(taxmat) <- taxmat[,1]
+taxmat <- taxmat[,-1]
+TAX = tax_table(taxmat)
+
+
+## For reporting in the results section 
+batsbugsy <- merge_phyloseq(TAX, sample_data(batsbugsx), otu_table(batsbugsx))
+batsbugsy
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 1887 taxa and 45 samples ]:
+# sample_data() Sample Data:        [ 45 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1887 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+  sample_names(batsbugsy)
+  rank_names(batsbugsy)
+  sample_variables(batsbugsy)
+  
+sort(colSums(otu_table(batsbugsy)))
+quantile(colSums(otu_table(batsbugsy)))
+summary(colSums(otu_table(batsbugsy)))
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 3857    3934    3950    3949    3961    4000 
+
+
+# Quick check 
+plot_bar(batsbugsy, x = "bat.sp", fill = "Order") +
+  xlab(NULL) + geom_bar(stat="identity") + theme_bw() + 
+  scale_colour_brewer(palette="Set1") + 
+  theme(text = element_text(size = 20))  
+
+batsbugsy <- batsbugsy%>%
+ tax_fix(min_length = 0,
+  unknowns = c("NA"),
+  sep = " ", anon_unique = TRUE,
+  suffix_rank = "classified") # Now any unknown family is labeled by its Order 
+checkthis <- ps_melt(batsbugsy) # That worked  #84915 obs 
+
+# prune OTUs that are not present in at least one sample
+bby <- prune_taxa(taxa_sums(batsbugsy) > 0, batsbugsy)
+
+bby # lost three taxa 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 1804 taxa and 45 samples ]:
+# sample_data() Sample Data:        [ 45 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1804 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+```
+
+
+```{r}
+## Export this phyloseq object 
+
+# saveRDS(bby, file = file.path(output_today, "BatsBugs_Nas_nontargetSamplesRemoved_fixed.RDS")) #01.12.2023
+#C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/1.CleanFilterDietData_2023-12-01
+```
