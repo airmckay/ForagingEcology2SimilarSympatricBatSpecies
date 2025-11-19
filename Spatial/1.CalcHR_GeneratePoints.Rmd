@@ -100,7 +100,7 @@ output_today
 
 dir.create(output_today)
 output_today
-
+# MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7634 obs of 49 vars
 
 ```
 
@@ -127,6 +127,8 @@ mystacinus<- Bats45$BatID %in% c("Amelia","Marie", "Turid", "Reeda", "Daisy", "L
 Bats45$Species<-ifelse(mystacinus == TRUE, "MYSTACINUS", "BRANDTII")
 Bats45$Species<- as.factor(Bats45$Species)
 
+table(Bats45$Species, Bats45$BatID)
+
 ## Rename the Dir Obs column to replace the space with a period 
 Bats45 <- Bats45 %>% rename(Dir.obs = "Dir obs")
 
@@ -145,8 +147,11 @@ table(Bats45$Dir.obs, Bats45$BatID)
 #Yes = onsite plots
 
 
-M.mystacinus <- subset(Bats45, Species == "MYSTACINUS")
-M.brandtii <- subset(Bats45, Species == "BRANDTII")
+M.mystacinus <- subset(Bats45, Species == "MYSTACINUS") %>% droplevels()
+M.brandtii <- subset(Bats45, Species == "BRANDTII") %>% droplevels()
+
+levels(M.mystacinus$BatID)
+levels(M.brandtii$BatID)
 
 par(mfrow=c(2,1))
 plot(table(M.mystacinus$BatID), main = "Number of plots Mmys", xaxt = "n")
@@ -228,7 +233,6 @@ Bats45<-Bats45[!is.na(Bats45$Easting) | !is.na(Bats45$Northing),]
 
 
 ## Visualize to check if this worked 
-
 sBats45 <- st_as_sf(Bats45, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
 plot(sBats45)
 mapview(sBats45) # This works! 
@@ -279,8 +283,6 @@ mapview(sMBRA)
 
 
 #####################################################
-
-
 MBRAll <- spTransform(MBRA, CRS("+proj=longlat"))
 MMYSll <- spTransform(MMYS, CRS("+proj=longlat"))
 #range95ll <- spTransform(MMYS, CRS("+proj=longlat"))
@@ -1009,6 +1011,7 @@ tm_shape(range95Sofia) +
   tmap_options(check.and.fix = TRUE) + 
   tm_layout(title = "Sofia 95%")
 
+p95
 # p75
 # p85
 # p90
@@ -2372,17 +2375,17 @@ head(Bats.avail)
 # 5    0 M.brandtii  Thea 604377.8  6660165
 # 6    0 M.brandtii  Thea 604798.2  6658901
 
-#test <- Bats.avail %>% mutate(BatID = factor(BatID), 
-#                              Species = factor(Species)) 
-summary(Bats$Species)
+test <- Bats.avail %>% mutate(BatID = factor(BatID), 
+                             Species = factor(Species)) 
+summary(Bats45$Species)
 #   M.brandtii M.mystacinus
 #         686           816 
-#summary(test$Species)
+summary(test$Species)
   # M.brandtii M.mystacinus 
   #       6860         8160  ## Good! 
 
-# test <- test %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
-# print(test, n = 21)
+test <- test %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
+ print(test)
 #  1 Astrid   M. brandtii  
 #  2 Dagny    M. brandtii  
 #  3 Kaja     M. brandtii  
@@ -2517,7 +2520,7 @@ summary(rsf.data2)
 rsf.data2$Species <- factor(rsf.data2$Species)
 rsf.data2$BatID <- factor(rsf.data2$BatID)
 
-rsf.data2B <- rsf.data2 %>% filter(Species == "M.brandtii") %>% droplevels()
+rsf.data2B <- rsf.data2 %>% dplyr::filter(Species == "M.brandtii") 
 rsf.data2M <- rsf.data2 %>% filter(Species == "M.mystacinus") %>% droplevels()
 
 knitr::kable(table(rsf.data2B $BatID)) %>% kable_minimal() # Number of total obs 

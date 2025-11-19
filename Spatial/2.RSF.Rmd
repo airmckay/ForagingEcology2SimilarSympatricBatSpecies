@@ -35,7 +35,7 @@ library(readxl)
 library(xlsx)
 library(corrplot)
 library(vegan)
-librar(mapview)
+library(mapview)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -54,7 +54,7 @@ output_today
 
 dir.create(output_today)
 output_today
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSF_50mRadius_2023-12-22"
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSF_50mRadius_2025-11-19"
 
 ```
 
@@ -88,12 +88,20 @@ names(vars)
 #mettext <- as.data.frame(names(vars))
 # write.csv(mettext, "~mettext.csv") # 15.11.2023
 
-## First convert to a normal dataframe(drop geoms/sf objects) 
-dt <- vars
+## First convert to a normal dataframe(drop geoms/sf objects)
 
+
+
+dt <- vars
+dt$BatID <- factor(dt$BatID) # 21 bats 
 dt1df <- as.data.frame(dt)
 dt1df <- dt1df %>% select(-geom)
 # 16522 obs of 49 vars
+
+### FIX THIS HERE! Turid is somehow in the wrong category... also double check how the points are distributed between the two taxa!! 
+
+test <- dt1df %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
+ print(test)
 
 summary(dt1df)
 
@@ -159,8 +167,12 @@ table(openareas$Species)
   #         15            7 
 
 table(openareas$BatID)
-# Amelia  Dagny  Ethel  Maren Phoebe  Reeda Steffi  Stine   Thea 
-#      2      1      2      1      5      1      7      2      1 
+  # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise 
+  #     29      101       87      173       84      111        8       78       36       77 
+  #  Maren    Marie     Nora   Phoebe Ragnhild    Reeda    Sofia   Steffi    Stine     Thea 
+  #    243       32       54       84       26       10       27       67      147      203 
+  #  Turid 
+  #      0 
 
 
 ggplot(random, aes(x = H95, y = D0)) + 
@@ -249,7 +261,7 @@ sp.scores <- as.data.frame(pca.summary$sites) %>%
 # 
 traittable <- trait.loadings  %>% 
   dplyr::select(trait, PC1, PC2)
-#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 22.12.2023
+#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 19.11.2025
 
 ### Compare trait loadings for bat locations with Pearson's correlation of PC1 and PC2, as well as of the LiDAR variables with each other 
 spdf <- left_join(sp.scores, dt1, by = "idvar")
@@ -263,7 +275,7 @@ corrplot(cor(spdf1),
 cortab1 <- cortab[1:2,]
 cortab2 <- t(cortab1) # Table of the values for further comparing 
 #write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
-# 22.12.2023
+# 19.11.2025
 
 ################################################################################
 ##### plotting 
@@ -295,8 +307,29 @@ traittable <- trait.loadings  %>%
 ## Simple models - separated by bat species, no species interaction 
 # install.packages("lme4", type = "source") 
 # library(lme4)
+
+## 19.11.2025
+# I discovered that Turid has erroneously been placed with M. brandtii when in fact she should be with M. mystacinus 
+## So now I am going to have to re-define the species column 
+
+## start here 
+# fix <- dt1 %>% mutate(species = factor(
+#   case_when(
+#     BatID == "Turid" ~ "M.mystacinus"),
+#     FALSE ~ Species)) 
+
 MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7634 obs of 49 vars
 MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8888 obs of 49 vars
+
+MBRA$BatID <- factor(MBRA$BatID) # 10 levels 
+levels(MBRA$BatID)
+ # "Astrid" "Dagny"  "Kaja"   "Maren"  "Nora"   "Phoebe" "Sofia"  "Steffi"
+ # "Thea"   "Turid" 
+
+MMYS$BatID <- factor(MMYS$BatID) # 11 levels 
+levels(MMYS$BatID)
+ # "Amelia"   "Aricia"   "Daisy"    "Ethel"    "Ida"      "Line"     "Louise"  
+ # "Marie"    "Ragnhild" "Reeda"    "Stine" 
 
 ########################################################
 ########################  MBRA  ########################
@@ -727,6 +760,16 @@ cowplot::plot_grid(p1, p2, p3, p4, nrow = 4,
                    hjust = -0.5, vjust = -0.5) +
   theme(text = element_text(size=16)) 
 
+ggsave(path = output_today, filename = "Fig3.tiff", width = 9, height = 12, device='tiff', dpi=300)
+
+
+cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, 
+                   labels = c("a.", "b.", "c.", "d."), 
+                   label_x = 0.08, label_y = 0.08,
+                   hjust = -0.5, vjust = -0.5) +
+  theme(text = element_text(size=16)) 
+
+ggsave(path = output_today, filename = "Fig3_forKappa.tiff", width = 10, height = 7, device='tiff', dpi=300)
 ```
 
 
