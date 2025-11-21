@@ -302,7 +302,7 @@ leaflet() %>% addProviderTiles("CartoDB.VoyagerLabelsUnder") %>%
   addCircleMarkers(data = MMYSll, radius = 3, color = "#011f4b", fillOpacity = 0.5) #%>% 
   #addPolygons(range95ll, color = "gray")
 
-leaflet() %>% addProviderTiles("CartoDB.DarkMatter")
+# leaflet() %>% addProviderTiles("CartoDB.DarkMatter")
 
 
 ```
@@ -2513,6 +2513,9 @@ Bats$Species<- as.factor(Bats$Species)
 B <- Bats %>% filter(Species == "M. brandtii") %>% droplevels()
 M <- Bats %>% filter(Species == "M. mystacinus") %>% droplevels()
 
+levels(B$BatID)
+levels(M$BatID)
+
 knitr::kable(table(B$BatID)) %>% kable_minimal() # Number of real obs 
 knitr::kable(table(M$BatID)) %>% kable_minimal() # Number of real obs 
 
@@ -2520,11 +2523,14 @@ summary(rsf.data2)
 rsf.data2$Species <- factor(rsf.data2$Species)
 rsf.data2$BatID <- factor(rsf.data2$BatID)
 
-rsf.data2B <- rsf.data2 %>% dplyr::filter(Species == "M.brandtii") 
-rsf.data2M <- rsf.data2 %>% filter(Species == "M.mystacinus") %>% droplevels()
+# rsf.data2B <- rsf.data2 %>% dplyr::filter(Species == "M.brandtii") 
+# rsf.data2M <- rsf.data2 %>% dplyr::filter(Species == "M.mystacinus") %>% droplevels()
+# 
+# knitr::kable(table(rsf.data2B $BatID)) %>% kable_minimal() # Number of total obs 
+# knitr::kable(table(rsf.data2M$BatID)) %>% kable_minimal() # Number of total obs 
 
-knitr::kable(table(rsf.data2B $BatID)) %>% kable_minimal() # Number of total obs 
-knitr::kable(table(rsf.data2M$BatID)) %>% kable_minimal() # Number of total obs 
+knitr::kable(table(rsf.data2$BatID)) %>% kable_minimal() 
+# Number of total obs 
 
 rsf.avail <- rsf.data %>% filter(used == 0)
 rsf.availB <- rsf.data %>% filter(Species == "M.brandtii") %>% droplevels()

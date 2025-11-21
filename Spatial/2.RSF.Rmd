@@ -54,7 +54,7 @@ output_today
 
 dir.create(output_today)
 output_today
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSF_50mRadius_2025-11-19"
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSF_50mRadius_2025-11-21"
 
 ```
 
@@ -64,8 +64,13 @@ output_today
 vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/231220_vars_dist50_v4_na-rm.rds")
 
 #Used and available positions - just for referencing. 
-# rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
-#      col_types = cols(...1 = col_skip()))
+rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
+      col_types = cols(...1 = col_skip()))
+
+rsf.data$BatID <- factor(rsf.data$BatID)
+used <- rsf.data %>% filter(used == 1) 
+
+summary(used$BatID)
 
 summary(vars)
 str(vars) # sf data frame
@@ -94,37 +99,89 @@ names(vars)
 
 dt <- vars
 dt$BatID <- factor(dt$BatID) # 21 bats 
+dt1df$Species <- factor(dt1df$Species)
 dt1df <- as.data.frame(dt)
 dt1df <- dt1df %>% select(-geom)
 # 16522 obs of 49 vars
 
+levels(dt$BatID )
+
 ### FIX THIS HERE! Turid is somehow in the wrong category... also double check how the points are distributed between the two taxa!! 
 
-test <- dt1df %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
- print(test)
+## Inset bat UID and fix species error for Turid
 
-summary(dt1df)
+dtx <- dt1df %>% mutate(
+  UID = factor(case_when(
+  BatID == "Amelia" ~ "M01",
+  BatID == "Aricia" ~ "M11", 
+  BatID == "Astrid" ~ "B07", 
+  BatID == "Dagny" ~ "B09", 
+  BatID == "Daisy" ~ "M06", 
+  BatID == "Ethel" ~ "M08", 
+  BatID == "Ida" ~ "M10", 
+  BatID == "Kaja" ~ "B01", 
+  BatID == "Line" ~ "M05", 
+  BatID == "Louise" ~ "M12", 
+  BatID == "Maren" ~ "B05", 
+  BatID == "Marie" ~ "M02",
+  BatID == "Nora" ~ "B03", 
+  BatID == "Phoebe" ~ "B06", 
+  BatID == "Ragnhild" ~ "M09", 
+  BatID == "Reeda" ~ "M04", 
+  BatID == "Sofia" ~ "B04", 
+  BatID == "Steffi" ~ "B08", 
+  BatID == "Stine" ~ "M07", 
+  BatID == "Thea"  ~ "B02", 
+  BatID == "Turid" ~ "M03")),
+  species = factor(case_when(
+    BatID == "Turid" ~ "M.mystacinus", 
+    TRUE ~ Species
+  ))) %>% 
+  dplyr::select(-Species) %>% 
+  rename(Species = species) 
+
+test <- dtx %>% select(BatID, Species, UID) %>% distinct() %>% arrange(UID)
+
+test ## Fixed! 
+
+summary(dtx)
+
+table(dtx$BatID)
+#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+#      176      990      891      913     1474     1287     1309 
+#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+#     1001      605      704     1551      341      539      682 
+# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+#      308      770      429      429      924     1111       88
+
+ 
+ ## Fixed! 
+
 
 ## There is an -Inf value for Hmax which can be corrrected like this: 
-dt1df$Hmax <- gsub("-Inf", "0.5", dt1df$Hmax)
-dt1df$Hmax <- as.numeric(dt1df$Hmax)
-summary(dt1df)
+dtx$Hmax <- gsub("-Inf", "0.5", dtx$Hmax)
+dtx$Hmax <- as.numeric(dtx$Hmax)
+summary(dtx)
 
-dt2df <- dt1df 
-# 16522 obs of 49 vars
+dt2df <- dtx 
+dim(dt2df)
+# 16522 obs of 50 vars
 
 # Scale all continuous numerical data 
 dt1 <- dt2df 
-dt1[,7:46]=scale(dt1[,7:46], scale=TRUE) #dt)
-# 16522 obs of 49vars 
+dt1[,6:45]=scale(dt1[,6:45], scale=TRUE) #dt)
+
+dim(dt1)
+# 16522 obs of 50 vars 
 
 ### Define non-forest areas in the dataset 
-
 # How does this look for used points? 
 dt2dfused <- dt2df %>% filter(used == 1)
 hist(dt2dfused$ttops.n) 
 
 hist(dt2dfused$D0)
+
+table(dt1df$BatID)
 
 
 ## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
@@ -141,17 +198,18 @@ table(openareas$Species)
   #         15            7 
 
 table(openareas$BatID)
-# Amelia  Dagny  Ethel  Maren Phoebe  Reeda Steffi  Stine   Thea 
-#      2      1      2      1      5      1      7      2      1 
-
+#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+#        2        0        0        1        0        2        0 
+#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+#        0        0        0        1        0        0        5 
+# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+#        0        1        0        7        2        1        0
 
 ggplot(dt2dfused, aes(x = H95, y = D0)) + 
   geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
   facet_wrap(~Species)
 
 ## WHat is the proportion of non forest areas for random pointS? 
-
-
 random <- dt2df %>% filter(used == 0)
 
 ## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
@@ -163,17 +221,16 @@ dim(openareas)
 # 11%
 
 table(openareas$Species)
-  # M.brandtii M.mystacinus 
-  #         15            7 
+  # M.brandtii        M.mystacinus 
+  #          1016             661 
 
 table(openareas$BatID)
-  # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise 
-  #     29      101       87      173       84      111        8       78       36       77 
-  #  Maren    Marie     Nora   Phoebe Ragnhild    Reeda    Sofia   Steffi    Stine     Thea 
-  #    243       32       54       84       26       10       27       67      147      203 
-  #  Turid 
-  #      0 
-
+#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+#       29      101       87      173       84      111        8 
+#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+#       78       36       77      243       32       54       84 
+# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+#       26       10       27       67      147      203        0 
 
 ggplot(random, aes(x = H95, y = D0)) + 
   geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
@@ -265,7 +322,7 @@ traittable <- trait.loadings  %>%
 
 ### Compare trait loadings for bat locations with Pearson's correlation of PC1 and PC2, as well as of the LiDAR variables with each other 
 spdf <- left_join(sp.scores, dt1, by = "idvar")
-spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
+spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, UID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
 #corrplot(cor(dtc))
 cortab <- as.data.frame(cor(spdf1)) 
 #windows()
@@ -274,8 +331,8 @@ corrplot(cor(spdf1),
          type="lower", col=brewer.pal(n=5, name="Greys"))
 cortab1 <- cortab[1:2,]
 cortab2 <- t(cortab1) # Table of the values for further comparing 
-#write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
-# 19.11.2025
+# write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
+# 21.11.2025
 
 ################################################################################
 ##### plotting 
@@ -294,7 +351,7 @@ pca.ggplot
 ## Table of PCA for further informing variable selection 
 traittable <- trait.loadings  %>% 
   dplyr::select(trait, PC1, PC2)
-#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 26.11.2023
+# write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 21.11.2025
 
 ## Now create a similar table for MBRA and MMYS separately 
 
@@ -322,14 +379,20 @@ MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7634 obs of 4
 MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8888 obs of 49 vars
 
 MBRA$BatID <- factor(MBRA$BatID) # 10 levels 
-levels(MBRA$BatID)
- # "Astrid" "Dagny"  "Kaja"   "Maren"  "Nora"   "Phoebe" "Sofia"  "Steffi"
- # "Thea"   "Turid" 
+table(MBRA$BatID)
+# Astrid  Dagny   Kaja  Maren   Nora Phoebe  Sofia Steffi   Thea 
+#    891    913   1001   1551    539    682    429    429   1111 
+
 
 MMYS$BatID <- factor(MMYS$BatID) # 11 levels 
-levels(MMYS$BatID)
- # "Amelia"   "Aricia"   "Daisy"    "Ethel"    "Ida"      "Line"     "Louise"  
- # "Marie"    "Ragnhild" "Reeda"    "Stine" 
+table(MMYS$BatID)
+  # Amelia   Aricia    Daisy    Ethel      Ida     Line   Louise 
+  #    176      990     1474     1287     1309      605      704 
+  #  Marie Ragnhild    Reeda    Stine    Turid 
+  #    341      308      770      924       88 
+
+summary(MMYS)
+summary(MBRA)
 
 ########################################################
 ########################  MBRA  ########################
@@ -344,13 +407,19 @@ fit2MBRA= glmer(used ~
                   D0 + H95 + Hsd + water.distance +
                   (1|BatID), data=MBRA,
               family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular')
+
+summary(fit2MBRA)
+
 isSingular(fit1MBRA)
 # FALSE
 isSingular(fit2MBRA)
 # FALSE
 AIC(fit1MBRA, fit2MBRA)
 #          df      AIC
+# fit1MBRA  7 4290.572 # 3 m scale is lower 
+# fit2MBRA  7 4301.640
+
+# (old analysis results)
 # fit1MBRA  7 4348.591 # 3 m scale is lower 
 # fit2MBRA  7 4359.372 
 
@@ -372,9 +441,13 @@ fit2MMYS= glmer(used ~
               family=binomial(link="logit"),nAGQ = 0) 
 AIC(fit1MMYS, fit2MMYS)
 #          df      AIC
+# fit1MMYS  7   5201.882 
+# fit2MMYS  7   5199.381 # 5 m scale is lower 
+
+
+## (old analysis)
 # fit1MMYS  7 5145.626
 # fit2MMYS  7 5143.210 # 5 m scale is lower 
-
          # The difference between the weights is negligible, I feel comfortable sticking with the 3 m resolution due to the singularity issues found in the M. brandtii models. 
 ################################################
 # The gap5 model for MBRA throws a singularity warning, and the AIC weights between the model pairs is very little so I will use the 3 m resolution models to continue. 
@@ -400,13 +473,20 @@ library(car)
 
 vif(fit1MBRA)
 # gap3.mean.area             D0            H95            Hsd water.distance 
+#       2.728157       2.409865       6.196688       5.262636       1.154840 
+
+## Old analysis: 
+# gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.741990       2.413678       6.131832       5.201883       1.152878 
+
 vif(fit1MMYS)
 # gap3.mean.area             D0            H95            Hsd water.distance 
+#       2.464794       2.996740       4.653837       3.828337       1.233227 
+
+## Old analysis: 
+# gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.464688       3.025031       4.715925       3.863640       1.249359 
-
-
-(bigfit2)
+# (bigfit2)
 
 # Fixed effects:
 #                                    Estimate Std. Error z value Pr(>|z|)    
@@ -435,14 +515,25 @@ fit3MMYS= glmer(used ~
 
 vif(fit3MBRA)
 # gap3.mean.area             D0            Hsd water.distance 
+#       2.500579       2.330923       1.117494       1.135345 
+
+## Old analysis: 
+# gap3.mean.area             D0            Hsd water.distance 
 #       2.513972       2.334639       1.111466       1.135041  
+
+
 vif(fit3MMYS)
+# gap3.mean.area             D0            Hsd water.distance 
+#       2.500702       2.590675       1.074616       1.224396 
+
+## Old analysis: 
 # gap3.mean.area             D0            Hsd water.distance 
 #       2.503120       2.605929       1.076558       1.235351 
 
+test <- dt1 %>% select(BatID, Species, UID) %>% distinct() %>% arrange(UID)
+test
 
 ## Sorted 
-
 bigfit1 = glmer(used ~  Species + 
                   gap3.mean.area + 
                   D0 + Hsd + water.distance +
@@ -455,6 +546,18 @@ bigfit1 = glmer(used ~  Species +
 summary(bigfit1)
 ## Now step-wise selection with AIC 
 drop1(bigfit1)
+# Model:
+# used ~ Species + gap3.mean.area + D0 + Hsd + water.distance + 
+#     Species * gap3.mean.area + Species * D0 + Species * Hsd + 
+#     Species * water.distance + (1 | BatID)
+#                        npar    AIC
+# <none>                      9565.0
+# Species:gap3.mean.area    1 9581.2
+# Species:D0                1 9604.9
+# Species:Hsd               1 9567.4
+# Species:water.distance    1 9563.3 ## this is low enough still that it warrants dropping 
+
+## Old analysis:
 # used ~ Species + gap3.mean.area + gap3.sd.area + D0 + Hsd + water.distance + 
 #     Species * gap3.mean.area + Species * gap3.sd.area + Species * 
 #     D0 + Species * Hsd + Species * water.distance + (1 | BatID)
@@ -467,7 +570,6 @@ drop1(bigfit1)
 # Species:water.distance    1 9564.5 ** 
 
 # Drop interaction between species and distance to water
-  
 bigfit2 =  glmer(used ~  Species + 
                    gap3.mean.area + 
                    D0 + Hsd + water.distance +
@@ -480,14 +582,16 @@ bigfit2 =  glmer(used ~  Species +
 
 drop1(bigfit2)
 # boundary (singular) fit: see help('isSingular')
+# used ~ Species + gap3.mean.area + D0 + Hsd + water.distance + 
+#     Species * gap3.mean.area + Species * D0 + Species * Hsd + 
+#     (1 | BatID)
 ## Suggests to keep everything 
 #                        npar    AIC
-# <none>                      9545.9 # Do not drop any further 
-# water.distance            1 9746.2
-# Species:gap3.mean.area    1 9572.8
-# Species:gap3.sd.area      1 9558.9
-# Species:D0                1 9599.5
-# Species:Hsd               1 9546.6
+# <none>                      9563.3
+# water.distance            1 9786.3
+# Species:gap3.mean.area    1 9580.2
+# Species:D0                1 9603.0
+# Species:Hsd               1 9566.2
 
 summary(bigfit2)
 
@@ -529,22 +633,32 @@ testZeroInflation(simulationOutput)
 testQuantiles(simulationOutput)
 # 	Test for location of quantiles via qgam
 # 
+# 	Test for location of quantiles via qgam
+# 
 # data:  simulationOutput
-# p-value < 2.2e-16
+# p-value = 0.147
 # alternative hypothesis: both
-## Evidence found that there are strong deviations from residuals and predicted values** 
-# "A significant p-value for the splines means the fitted spline deviates from a flat line at the expected location (p-values of intercept and spline are combined via Benjamini & Hochberg adjustment to control the FDR)
-#The p-values of the splines are combined into a total p-value via Benjamini & Hochberg adjustment to control the FDR."
+
 testCategorical(simulationOutput, catPred = dt1$BatID)
 ## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
 testCategorical(simulationOutput, catPred = dt1$Species)
 ## No bat species had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
 
 vif(bigfit2)
-        #        Species         gap3.mean.area                     D0                    Hsd 
-        #       1.095477               5.148412               5.380427               2.109284 
-        # water.distance Species:gap3.mean.area             Species:D0            Species:Hsd 
-        #       1.174590               5.280176               5.574119               2.127375 
+            #    Species         gap3.mean.area                     D0 
+            #   1.093962               5.201610               5.476647 
+            #        Hsd         water.distance Species:gap3.mean.area 
+            #   2.125315               1.171877               5.317849 
+            # Species:D0            Species:Hsd 
+            #   5.645544               2.141335 
+
+### Old analysis: 
+        # Species         gap3.mean.area                     D0                    
+#       1.095477               5.148412               5.380427    
+#       Species:D0       water.distance          Species:gap3.mean.area             
+#        2.109284              1.174590               5.280176                       
+#     Species:D0            Species:Hsd 
+#      5.574119                2.127375 
 
 
 # Higher VIF values for interacting terms is not too much of a concern 
@@ -563,30 +677,33 @@ bigfit2.0<- glm(used ~  Species +
                    Species*Hsd, 
                   family=binomial(), data=dt1)
 summary(bigfit2.0)
+
 # Call:
-# glm(formula = used ~ gap3.mean.area + gap3.sd.area + D0 + H95 + 
-#     Hsd + water.distance, family = binomial(), data = MMYS)
+# glm(formula = used ~ Species + gap3.mean.area + D0 + Hsd + water.distance + 
+#     Species * gap3.mean.area + Species * D0 + Species * Hsd, 
+#     family = binomial(), data = dt1)
 # 
 # Coefficients:
-#                Estimate Std. Error z value Pr(>|z|)    
-# (Intercept)                        -2.35509    0.04372 -53.863  < 2e-16 ***
-# SpeciesM.mystacinus                -0.20973    0.06144  -3.414 0.000641 ***
-# gap3.mean.area                     -0.64842    0.06835  -9.487  < 2e-16 ***
-# D0                                 -0.45603    0.07056  -6.463 1.03e-10 ***
-# Hsd                                 0.24518    0.04457   5.502 3.76e-08 ***
-# water.distance                     -0.48724    0.03492 -13.952  < 2e-16 ***
-# SpeciesM.mystacinus:gap3.mean.area  0.47468    0.09738   4.875 1.09e-06 ***
-# SpeciesM.mystacinus:D0              0.58313    0.09526   6.122 9.26e-10 ***
-# SpeciesM.mystacinus:Hsd             0.13679    0.06382   2.143 0.032079 * 
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -2.35578    0.04401 -53.527  < 2e-16 ***
+# SpeciesM.mystacinus                -0.20635    0.06151  -3.355 0.000794 ***
+# gap3.mean.area                     -0.65471    0.06869  -9.531  < 2e-16 ***
+# D0                                 -0.46646    0.07124  -6.547 5.85e-11 ***
+# Hsd                                 0.24381    0.04473   5.451 5.00e-08 ***
+# water.distance                     -0.48438    0.03488 -13.888  < 2e-16 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.48231    0.09741   4.952 7.36e-07 ***
+# SpeciesM.mystacinus:D0              0.59449    0.09545   6.228 4.72e-10 ***
+# SpeciesM.mystacinus:Hsd             0.14181    0.06383   2.222 0.026297 *  
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
 # (Dispersion parameter for binomial family taken to be 1)
 # 
-#     Null deviance: 5408.0  on 8849  degrees of freedom
-# Residual deviance: 5104.5  on 8843  degrees of freedom
-# AIC: 5118.5
+#     Null deviance: 10066.4  on 16521  degrees of freedom
+# Residual deviance:  9550.5  on 16513  degrees of freedom
+# AIC: 9568.5
 # 
+# Number of Fisher Scoring iterations: 5
 
 
 # Number of Fisher Scoring iterations: 6
@@ -637,13 +754,13 @@ p1
 # distance to water ---------------------------------------
 range.gs <- range(dt1$water.distance)
 range.gs
-# 1.282820  3.698758
+#-1.282820  3.698758
   
 pred <- data.frame(expand.grid(
   D0 = mean(dt1$D0),
   gap3.mean.area = mean(dt1$gap3.mean.area),
   Hsd = mean(dt1$Hsd), 
-  water.distance = seq(from = 1.282820  , to = 3.698758, by = 0.1),
+  water.distance = seq(from = -1.282820  , to = 3.698758, by = 0.1),
   Species = c("M.brandtii", "M.mystacinus"))) 
   
 pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
@@ -716,13 +833,18 @@ p3
 # Hsd ---------------------------------------
 range.Hsd <- range(dt1$Hsd)
 range.Hsd
+
+#Now: 
+# -2.233849  3.866324
+
+# Previously 
 # -2.125363  3.625778
   
 pred <- data.frame(expand.grid(
   D0 = mean(dt1$D0),
   gap3.sd.area = mean(dt1$gap3.sd.area),
   gap3.mean.area = mean(dt1$gap3.mean.area),
-  Hsd = seq(from = -2.125363, to = 3.625778, by = 0.1), 
+  Hsd = seq(from = -2.233849, to = 3.866324, by = 0.1), 
   water.distance = mean(dt1$water.distance),
   Species = c("M.brandtii", "M.mystacinus"))) 
   
