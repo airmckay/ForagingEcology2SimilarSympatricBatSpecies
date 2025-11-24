@@ -36,6 +36,7 @@ library(xlsx)
 library(corrplot)
 library(vegan)
 library(mapview)
+library(sf)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -95,10 +96,9 @@ names(vars)
 
 ## First convert to a normal dataframe(drop geoms/sf objects)
 
-
-
 dt <- vars
 dt$BatID <- factor(dt$BatID) # 21 bats 
+dt1df<-st_drop_geometry(dt)
 dt1df$Species <- factor(dt1df$Species)
 dt1df <- as.data.frame(dt)
 dt1df <- dt1df %>% select(-geom)
@@ -136,9 +136,9 @@ dtx <- dt1df %>% mutate(
   species = factor(case_when(
     BatID == "Turid" ~ "M.mystacinus", 
     TRUE ~ Species
-  ))) %>% 
-  dplyr::select(-Species) %>% 
-  rename(Species = species) 
+  ))) %>% select(-Species) %>% 
+  mutate(Species = species) %>% 
+  select(-species)
 
 test <- dtx %>% select(BatID, Species, UID) %>% distinct() %>% arrange(UID)
 
@@ -313,15 +313,17 @@ rownames(meta) <- meta$idvar
 meta$gen.spe <- meta$idvar
 meta$used <- as.factor(meta$used)
 # Scores for all the different bat locations 
+
 sp.scores <- as.data.frame(pca.summary$sites) %>% 
-  mutate(gen.spe = rownames(.)) %>% inner_join(meta) 
-# 
+  dplyr::mutate(gen.spe = rownames(.)) %>% dplyr::inner_join(meta, by="gen.spe") 
+
 traittable <- trait.loadings  %>% 
   dplyr::select(trait, PC1, PC2)
+
 #write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 19.11.2025
 
 ### Compare trait loadings for bat locations with Pearson's correlation of PC1 and PC2, as well as of the LiDAR variables with each other 
-spdf <- left_join(sp.scores, dt1, by = "idvar")
+spdf <- dplyr::left_join(sp.scores, dt1, by = "idvar")
 spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, UID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
 #corrplot(cor(dtc))
 cortab <- as.data.frame(cor(spdf1)) 
@@ -351,7 +353,7 @@ pca.ggplot
 ## Table of PCA for further informing variable selection 
 traittable <- trait.loadings  %>% 
   dplyr::select(trait, PC1, PC2)
-# write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 21.11.2025
+# write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 24.11.2025
 
 ## Now create a similar table for MBRA and MMYS separately 
 
@@ -594,6 +596,49 @@ drop1(bigfit2)
 # Species:Hsd               1 9566.2
 
 summary(bigfit2)
+# Generalized linear mixed model fit by maximum likelihood (Adaptive Gauss-Hermite
+#   Quadrature, nAGQ = 0) [glmerMod]
+#  Family: binomial  ( logit )
+# Formula: used ~ Species + gap3.mean.area + D0 + Hsd + water.distance +  
+#     Species * gap3.mean.area + Species * D0 + Species * Hsd +      (1 | BatID)
+#    Data: dt1
+# 
+#      AIC      BIC   logLik deviance df.resid 
+#   9563.3   9640.4  -4771.6   9543.3    16512 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.7635 -0.3560 -0.2783 -0.2008  7.8062 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.0187   0.1368  
+# Number of obs: 16522, groups:  BatID, 21
+# 
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -2.37265    0.06453 -36.768  < 2e-16 ***
+# SpeciesM.mystacinus                -0.19439    0.08878  -2.189   0.0286 *  
+# gap3.mean.area                     -0.62317    0.07155  -8.709  < 2e-16 ***
+# D0                                 -0.45490    0.07149  -6.364 1.97e-10 ***
+# Hsd                                 0.25243    0.04578   5.514 3.51e-08 ***
+# water.distance                     -0.51682    0.03585 -14.418  < 2e-16 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.43776    0.09973   4.390 1.14e-05 ***
+# SpeciesM.mystacinus:D0              0.61467    0.09615   6.393 1.63e-10 ***
+# SpeciesM.mystacinus:Hsd             0.14392    0.06491   2.217   0.0266 *  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) SpcsM. gp3.m. D0     Hsd    wtr.ds SM.:3. SM.:D0
+# SpcsM.mystc -0.709                                                 
+# gap3.mean.r  0.030 -0.003                                          
+# D0           0.100 -0.076  0.737                                   
+# Hsd         -0.157  0.138  0.231  0.074                            
+# water.dstnc  0.126  0.054  0.127 -0.022  0.167                     
+# SpcsM.m:3.. -0.019  0.084 -0.715 -0.529 -0.162 -0.070              
+# SpcsM.my:D0 -0.090  0.070 -0.563 -0.741 -0.075 -0.104  0.757       
+# SpcsM.mys:H  0.119 -0.204 -0.155 -0.054 -0.695 -0.053  0.227  0.122
 
 sjPlot::tab_model(bigfit2, transform = NULL, auto.label = FALSE, show.re.var = TRUE,   show.fstat = TRUE, show.stat = TRUE) 
 
