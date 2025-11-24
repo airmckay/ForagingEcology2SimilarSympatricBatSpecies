@@ -162,7 +162,15 @@ quantile(colSums(otu_table(batsbugs)))
 #   0%  25%  50%  75% 100% 
 # 4000 4000 4000 4000 4000 
 
+metadata <- as.data.frame(sample_data(batsbugs))
+metadf <- as.data.frame(metadata)
+metadf$SampleID <- rownames(metadf)
+metadf$sample.nr <- factor(metadf$sample.nr)
+metadf$year <- factor(metadf$year)
 
+
+
+table(metadf$bat.sp, metadf$sample.nr)
 #Remove OTUs with less than 10 sequence reads 
 batsbugs1 <- prune_taxa(taxa_sums(batsbugs) >= 10, batsbugs) 
 batsbugs
