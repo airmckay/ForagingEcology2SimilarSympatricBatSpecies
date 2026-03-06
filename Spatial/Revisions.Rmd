@@ -1,0 +1,318 @@
+---
+title: "Revisions"
+output: html_document
+date: "2026-03-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Following up on first round of revisions to per editor's feedback
+## March 2025
+
+
+
+# Set up the work space
+```{r}
+##############################################################
+library(rlang)
+library(cowplot)
+library(tidyverse) #
+library(readxl) ## 
+library(reshape2) 
+library(ggpubr) # 
+library(cowplot) # 
+library(devtools) #
+library(phyloseq)
+library(plyr)
+library(Rcpp)
+library(vctrs)
+library(sjPlot)
+library(effects)
+library(ade4)
+library(pals)
+library(RColorBrewer)
+library(MetBrewer)
+library(knitr)
+library(kableExtra)
+library(colorBlindness)
+library(devtools)
+
+library(SpatialKDE)
+library(tmap)
+library(tmaptools)
+library(tidyverse)
+library(sp)
+library(sf)
+library(rgeos)
+library(adehabitatMA)
+library(digest)
+library(mime)
+library(jsonlite)
+library(crs)
+library(dplyr)
+library(adehabitatHR)
+library(Rcpp)
+library(raster)
+library(rgdal)
+library(munsell)
+library(tibble)
+library(pillar)
+library(ggplot2)
+library(ResourceSelection)
+library(mapview)
+library(amt)
+library(sjPlot)
+library(Rgb)
+library(nloptr)
+library(colorspace)
+library(rlang)
+library(lattice)
+library(dismo)
+library(scales)
+library(rJava)
+library(beepr)
+library(OpenStreetMap)
+library(lubridate)
+library(rgdal)
+library(munsell)
+library(pillar)
+library(mapview)
+library(amt)
+library(sjPlot)
+library(Rgb)
+library(nloptr)
+library(rlang)
+library(broom) 
+library(MASS)
+library(ggmap)
+library(gridExtra)
+library(raster)
+library(leaflet)
+library(terra)
+
+##############################################################
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/Diet_Myotis_brandts_mystacinus"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "Revisions"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+
+## Input
+
+df <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/batdata.csv", delim =";")
+
+cap <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/capture (2).csv", delim =";")
+
+meta <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/BatsMeta.xlsx")
+
+#157 obs 5 vars 
+
+
+```
+
+
+
+```{r}
+
+names(cap)
+tag <- cap %>% 
+  dplyr::filter(Name != "") %>% 
+  dplyr::select(Date, Species, Sex, `Reprod.`, Age, Weight, 
+                `BM1 (g)`, `Forearm l. (mm. )`, 
+                `Photo ID`, Name) %>%
+  dplyr::mutate(Species = factor(Species), 
+                Sex = factor(Sex),
+                Name = factor(Name),
+                ID = factor(`Photo ID`), 
+                RFA = `Forearm l. (mm. )`,
+                BM1 = `BM1 (g)`,
+                REPRO = `Reprod.`) %>% 
+  select(-c(`BM1 (g)`, `Forearm l. (mm. )`, `Photo ID`, `Reprod.` )) %>% 
+  arrange(Species, ID)
+
+summary(tag)
+
+temp <- tag %>% select(ID, Name) %>% droplevels()
+
+temp
+
+
+## Report the average capture weight and RFA of MBRA and MMYS from all captures 
+cap1 <- cap %>% 
+  dplyr::select(Date, Species, Sex, `Reprod.`, Age, Weight, 
+                `BM1 (g)`, `Forearm l. (mm. )`, 
+                `Photo ID`, Name) %>%
+  dplyr::mutate(Species = factor(Species), 
+                Sex = factor(Sex),
+                Name = factor(Name),
+                ID = factor(`Photo ID`), 
+                RFA = `Forearm l. (mm. )`,
+                BM1 = `BM1 (g)`,
+                REPRO = `Reprod.`,
+                Date = as.Date(Date, format = "%d.%m.%Y")) %>% 
+  select(-c(`BM1 (g)`, `Forearm l. (mm. )`, `Photo ID`, `Reprod.` )) %>% 
+  dplyr::filter(!is.na(Date)) %>% # drop the empty rows 
+  arrange(Species, ID) 
+
+# 223 obs of 10 vars 
+summary(cap1)
+# date error that needs fixing
+
+cap1$Date <- update(cap1$Date, year = 2018)
+summary(cap1)
+
+# Drop escaped bats or those that were not fully processed (escapees or released early) 
+# 4 cases - 1 MDAU, 1 Myotis spp., 1 PAUR, 1 unknown species 
+
+cap2 <- cap1 %>% dplyr::filter(!is.na(RFA))
+#219 of 10 vars
+
+summary(cap2)
+
+
+levels(cap2$Species)
+summary(cap2$Species)
+
+mbra <- cap2 %>% dplyr::filter(Species == "Myotis brandtii") %>% droplevels() 
+
+summary(mbra)
+sd(mbra$Weight)
+
+mmys <- cap2 %>% dplyr::filter(Species == "Myotis mystacinus") %>% droplevels() 
+
+summary(mmys)
+sd(mmys$Weight)
+```
+
+
+## Convert HR from M2 to HA and re-run the Mann Whitney U test 
+## Compare home ranges
+
+"A Mann-Whitney U test (sometimes called the Wilcoxon rank-sum test) is used to compare the differences between two independent samples when the sample distributions are not normally distributed and the sample sizes are small (n <30).
+
+It is considered to be the nonparametric equivalent to the two-sample independent t-test." 
+# https://www.statology.org/mann-whitney-u-test-r/ 
+
+```{r}
+HR <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/HomerangeOverview.xlsx")
+
+# multiple by 100 to conver the area from km2 to hectares 
+HR$hectares <- as.numeric(HR$HRarea*100)
+temp <- HR %>% dplyr::select(BatID, HRarea, hectares)
+temp
+
+# check to see if this effects the mann whitney u test 
+
+HR$Species <- as.factor(HR$Species)
+HR$BatID <- as.factor(HR$BatID)
+mbrahr <- HR %>% 
+  filter(Species == "M.brandtii") %>% 
+  droplevels() %>% 
+  select(hectares) 
+mbrahr <- mbrahr$hectares
+
+mmyshr <- HR %>% 
+  filter(Species == "M.mystacinus") %>% 
+  droplevels() %>% 
+  select(hectares) 
+mmyshr <- mmyshr$hectares
+# 
+
+summary(mbrahr)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #  11.0   160.0   194.0   399.9   523.0  1274.0
+sd(mbrahr)
+
+summary(mmyshr)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 8.00   36.75   51.50   71.75  109.75  187.00
+sd(mmyshr)
+
+# 	Wilcoxon rank sum exact test
+wilcox.test(mbrahr, mmyshr)
+# still the same! 
+# 
+# data:  mbrahr and mmyshr
+# W = 92, p-value = 0.00562
+# alternative hypothesis: true location shift is not equal to 0
+# There is strong evidence that the home range size between the two species is distinct from each other. 
+```
+
+## Now check the distance between available points for the bats locations 
+```{r}
+#Used and available positions - just for referencing. 
+rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
+      col_types = cols(...1 = col_skip()))
+
+rsfcoords <- coordinates(rsf.data) <- rsf.data[,c("Easting","Northing")]
+#assigning coordinates 
+library(sp)
+
+proj4string(rsf.data)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#Define the projection 
+crs(rsf.data)
+
+rsf.sf <- st_as_sf(rsf.data, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+# plot(rsf.sf )
+# mapview(sMMYS) ## all good here
+
+## Calculate nearest neighbors 
+# Calculate the distance matrix
+dist_matrix <- st_distance(rsf.sf)
+
+# For each point, find the index of the nearest other point
+# Exclude self (distance == 0)
+nearest_index <- apply(dist_matrix, 1, function(x) {
+  # Replace self-distance with Inf to exclude it from min
+  x[x == 0] <- Inf
+  which.min(x)
+})
+
+# Get the nearest distances
+nearest_distance <- apply(dist_matrix, 1, function(x) {
+  x[x != 0][which.min(x[x != 0])]
+})
+
+# Add results to your data
+rsf.sf$nearest_id <- nearest_index
+rsf.sf$nearest_dist <- nearest_distance
+
+#print(points_sf)
+
+
+## Now find the nearest neighbor, taking into consideration different individuals 
+summary_stats <- rsf.sf %>% dplyr::filter(used == 0) %>% 
+  group_by(BatID) %>%
+  summarise(
+    min_nn = min(nearest_dist, na.rm = TRUE),
+    max_nn = max(nearest_dist, na.rm = TRUE),
+    mean_nn = mean(nearest_dist, na.rm = TRUE)
+  )
+
+summary(summary_stats)
+ #    BatID               min_nn            max_nn          mean_nn                geometry 
+ # Length:21          Min.   :0.06774   Min.   : 14.76   Min.   : 3.881   MULTIPOINT   :21  
+ # Class :character   1st Qu.:0.08153   1st Qu.: 24.48   1st Qu.: 7.086   epsg:NA      : 0  
+ # Mode  :character   Median :0.24341   Median : 35.73   Median : 9.319   +proj=utm ...: 0  
+ #                    Mean   :0.32303   Mean   : 59.73   Mean   :12.385                     
+ #                    3rd Qu.:0.44954   3rd Qu.: 63.78   3rd Qu.:13.059                     
+ #                    Max.   :1.05177   Max.   :254.08   Max.   :41.964 
+
+
+```
+
