@@ -1,0 +1,1330 @@
+---
+title: "4.AlphaBetaDiversity"
+output: html_document
+---
+
+
+
+## Important: 
+** The data is already normalized via SRS (scaling with ranked subsampling)
+
+### Prepare work space and load packages
+
+```{r setup}
+
+library(rlang)
+library(cowplot)
+library(tidyverse) #
+library(readxl) #
+library(vegan) #
+library(reshape2) 
+library(ggpubr) # 
+library(cowplot) # 
+library(devtools) #
+library(phyloseq)
+library(plyr)
+library(Rcpp)
+library(vctrs)
+library(metagMisc)
+library(lme4)
+library(DHARMa)
+library(sjPlot)
+library(effects)
+library(qiime2R)
+library(BiocManager)
+library(patchwork)
+library(microViz)
+library(beepr)
+library(microViz)
+library(mixOmics)
+library(mia)
+library(miaTime)
+library(miaViz)
+library(ade4)
+library(pals)
+library(RColorBrewer)
+library(MetBrewer)
+library(MASS)
+library(knitr)
+library(kableExtra)
+library(colorBlindness)
+library(devtools) 
+library(speedyseq)
+library(microbiome)
+library(microbiomer)
+library(microbiomeutilities)
+library(qiime2R)
+library(netresponse)
+library(rstatix)
+library(vegan)
+library(picante)
+
+if (!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+devtools::install_github("YuLab-SMU/MicrobiotaProcess")
+library(MicrobiotaProcess)
+
+##############################################################
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/Diet_Myotis_brandts_mystacinus"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "Beta_Diet"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/AlphaBeta_Diet_2026-03-17"
+
+```
+
+## Import and filter the dataset
+- Remove taxa unknow at the Order level and above (none removed)
+- Remove OTUs with 10 or less sequence reads (729 OTUs removed) * 
+- Remove samples with 600 or less sequence reads (none removed)
+
+
+```{r}
+
+phylo <- qza_to_phyloseq(
+  features= "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/FromFranz_07.2023/R-scrips/sPLS-DA/bat-feat-tab-clean.qza",  
+  # This file was sent by Franz on 06.09.2023        
+   #it makes sense to use a filtered table, as sPLS-DA can't handle rare features very well
+  taxonomy= "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/FromFranz_07.2023/R-scrips/sPLS-DA/bat-classified-repr-seq.qza", 
+  metadata= "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/FromFranz_07.2023/R-scrips/sPLS-DA/bat-metadata_clean.tsv")
+
+phylo #shows what our physeq object contains
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 3629 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 3629 taxa by 7 taxonomic ranks ]
+
+otu_table(phylo)
+tax_table(phylo)
+sample_data(phylo)
+
+
+sort(colSums(otu_table(phylo))) # 4000 reads per sample 
+
+#we remove all features that are unassigned on the phylum level (none lost)
+phylos <- subset_taxa(phylo, Phylum != "NA")
+
+phylos   #shows what our physeq object contains
+#phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 3629 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 3629 taxa by 7 taxonomic ranks ]
+#now we extract the data we need in the exact format that we need
+
+otu_table(phylos)
+
+
+#we remove all features that are unassigned on Order level (none lost)
+phyloseq2 <- subset_taxa(phylo, Order != "NA")
+
+phyloseq2   #shows what our physeq object contains
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 3629 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 3629 taxa by 7 taxonomic ranks ]*
+
+
+batsbugs <- phylo %>%  ps_filter(bat.sp %in% c("MBRA", "MMYS")) 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 2616 taxa and 47 samples ]
+# sample_data() Sample Data:       [ 47 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 2616 taxa by 7 taxonomic ranks ]
+#   
+#Inspect the Phyloseq object:
+  
+  sample_names(batsbugs)
+  rank_names(batsbugs)
+  sample_variables(batsbugs)
+  
+sort(colSums(otu_table(batsbugs)))
+quantile(colSums(otu_table(batsbugs)))
+#   0%  25%  50%  75% 100% 
+# 4000 4000 4000 4000 4000 
+
+
+#Remove OTUs with less than 10 sequence reads 
+batsbugs1 <- prune_taxa(taxa_sums(batsbugs) >= 10, batsbugs) 
+batsbugs
+batsbugs1
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 1887 taxa and 47 samples ]:
+# sample_data() Sample Data:        [ 47 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1887 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+ntaxa(batsbugs1)
+# 2616 - 1887 # 729 taxa lost 
+
+quantile(colSums(otu_table(batsbugs1)))
+#     0%    25%    50%    75%   100% 
+# 3857.0 3934.0 3950.0 3960.5 4000.0 
+
+sort(colSums(otu_table(batsbugs1)))
+
+# Two samples need to be removed that were identified as non-target bat species from the bat species genetic analyses 
+batsbugs2<-subset_samples(batsbugs1, sample.nr != "2" & sample.nr != "46")
+batsbugs2 # 2 samples removed 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 1887 taxa and 45 samples ]
+# sample_data() Sample Data:       [ 45 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 1887 taxa by 7 taxonomic ranks ]
+
+
+### Notes on metadata 17.11.2023 
+# One sample (sample 34, Marie) was identified as M. mystacinus in the field and was also found to be M. mystacinus genetically but the metadata here does not reflect that (labeling error). 
+
+# I manually edited the metadata file "bat-metadata_clean.tsv" to correct this. 
+
+# While I was reviewing the metadata file, I found another typo where sample 35 should be Myotis brandtii but has been described as Myotis mystacinus and corrected this as well. 
+
+
+#removed 5 samples, check that this worked: 
+sort(colSums(otu_table(batsbugs2)))
+quantile(colSums(otu_table(batsbugs2)))
+#     0%    25%    50%    75%   100% 
+#   3857   3934   3950   3961    4000  
+
+## Visualize to check: 
+# Compare abundance across of different order of OTUs betwween bat species  
+# 
+# p1 <- plot_bar(batsbugs2, x = "bat.sp", fill = "Order") +
+#                 geom_bar(stat="identity") + 
+#   theme_bw() + ggtitle("OTU > 10 reads, Samples > 600 reads")
+# p1 # 
+
+
+```
+
+
+
+## Determine what the NA prey items are 
+!! Note !! 
+NCBI BLAST of the one genetic sequence that accounts  (one prey item ?) accounting for 411 OTUs .
+BLAST result: (Ula species, Crane flies) 
+380 of the 411 OTUs were in the Diptera Order:
+
+I assigned 17100 of these reads (380 OTUs) to Ula species but left the rest as unknown orders.
+```{r}
+
+############# Find the NAs 
+
+# Convert Phyloseq object to dataframe
+bbdf = psmelt(batsbugs2)
+dim(bbdf)
+#84915   19
+
+summary(bbdf)
+names(bbdf)
+#  [1] "OTU"            "Sample"         "Abundance"      "sample.nr"      "batch"         
+#  [6] "bat.sp"         "sex"            "year"           "date"           "date.text"     
+# [11] "nanodrop.ngul." "extradctio.run" "Kingdom"        "Phylum"         "Class"         
+# [16] "Order"          "Family"         "Genus"          "Species" 
+
+
+
+bbdf1<- bbdf[is.na(bbdf$Family),] # Create a dataset of only prey items with unknown famillies 
+summary(bbdf1)
+# 18495 obs of NA on at least the family level. 
+
+# But how many unique ASVs? 
+bbdf1$OTU <- as.factor(bbdf1$OTU)
+summary(bbdf1)
+
+
+na_asv <- bbdf1 %>% distinct(OTU, .keep_all=T) 
+# 411 distinct ASV features that are NA 
+# write.csv(na_asv, file=file.path(output_today,"unknown_asvs.csv")) 
+# output_today
+
+## Check which sequences are related to these features
+seqs <- read_qza("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Analysis archive/bat_repr-seq.qza")
+seqs1 <- seqs$data # extract the data with the DNA sequences 
+na_asv$uuid <- na_asv$OTU
+
+na_seq <- cross_join(na_asv, seqs1, copy = TRUE)
+dim(na_seq)
+# 2065686      21
+
+na_seq1 <- na_seq %>% distinct(OTU, .keep_all = TRUE) 
+dim(na_seq)
+#write.csv(na_seq1, file=file.path(output_today,"unknown_asvs_with_sequences.csv")) 
+
+na_seq2 <- na_seq1 %>% dplyr::rename(sequences = x) %>% dplyr::select(OTU, sequences)
+#write.csv(na_seq2, file=file.path(output_today,"unknown_asvs_with_sequences_only.csv"))
+
+test1 <- unique(na_seq2$sequences)
+test1
+## There is just one sequence that is related to all of these features... 
+# "AGATATTGGAACTATATATAATATAAAAATAGCTTGATCAGGAATAGTGGGGACTTCTTTAAGTATATTAATTCGAGCTGAATTAGGACATCCTGGGGCATTAATTGGAGATGATCAAATTTATAATGTAATTGTTACTGCTCATGCTTTCATTATAATTTTTTTTATAGTAATACCAATTATAATT"
+
+# I manually ran this sequence through blastn on the NCBI Blast+ webpage. 
+# The results of the blast are saved :
+# C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Analysis archive/BLASToutput_UnknownNA_taxa.txt
+
+# Basically, there were a few different species of Ula (crane flies) that this most likely be. This is the same sequence for all 411 missing features. So now the next step is to insert the family and genus for Ula spp. for all the missing features. 
+
+# Create a list of all the unknown feature IDs
+unknowns <- as.character(unique(na_seq2$OTU))
+head(unknowns)
+unknowns
+
+
+# Visualize the tax table 
+# suppressPackageStartupMessages(library(microViz))
+#tax_fix_interactive(batsbugs2)
+
+# Clean the tax names 
+batsbugsx <- batsbugs2%>%
+ tax_fix(min_length = 0,
+  unknowns = c("NA"),
+  sep = " ", anon_unique = TRUE,
+  suffix_rank = "classified") # Now any unknown family is labeled by its Order 
+
+# Subset to only include the unknown feature IDs, then change unknown Diptera to Ula spp.
+my_subset <- subset(otu_table(batsbugsx), rownames(otu_table(batsbugsx)) %in% unknowns)
+
+new_physeq <- merge_phyloseq(my_subset, tax_table(batsbugsx), sample_data(batsbugsx))
+new_physeq
+# otu_table()   OTU Table:         [ 411 taxa and 45 samples ]
+# sample_data() Sample Data:       [ 45 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 411 taxa by 7 taxonomic ranks ]
+
+# How many of these are Diptera? 
+dip_new <- subset_taxa(new_physeq, Order == "Diptera")
+dip_new 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:         [ 380 taxa and 45 samples ]
+# sample_data() Sample Data:       [ 45 samples by 9 sample variables ]
+# tax_table()   Taxonomy Table:    [ 380 taxa by 7 taxonomic ranks ]
+## 380 taxa will be assigned to Ula spp. 
+
+test <- ps_melt(dip_new) #17100 reads of Diptera that will be changed to Ula sp. 
+
+unk.prey <- ps_melt(new_physeq) %>% mutate(Order = factor(Order)) %>% distinct()
+summary(unk.prey$Order) 
+    # Araneae     Diptera Hymenoptera Lepidoptera  Neuroptera 
+    #   360       17100         135         855          45 
+# I will be able to assigned 17100 reads of these OTUs to Ula species but will leave the rest as unknown orders. 
+
+new_physeq1 <- new_physeq %>% 
+  mutate_tax_table(
+  Family = case_when(
+  Order  == "Diptera" ~ "Pediciidae", 
+  .default = as.character(Family))) %>% 
+  mutate_tax_table(Genus = case_when(
+  Order  == "Diptera" ~ "Ula",
+  .default = as.character(Genus))) %>% 
+  mutate_tax_table(Species = case_when(
+  Order  == "Diptera" ~ "Ula spp.",
+  .default = as.character(Species)))
+
+new_physeq1 # These are the unknowns 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 411 taxa and 45 samples ]:
+# sample_data() Sample Data:        [ 45 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 411 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+# microbiome::plot_taxa_prevalence(new_physeq1, "Family")
+# 
+# pB <- plot_bar(new_physeq, x = "bat.sp", fill = "Genus") + 
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw() 
+# pB
+# 
+# pB1 <- plot_bar(new_physeq1, x = "bat.sp", fill = "Genus") + 
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw() 
+# pB1
+# 
+# # Large proportion of the unknowns were Ula spp. 
+# pB2 <- plot_bar(new_physeq1, x = "bat.sp", fill = "Species") + 
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw() 
+# pB2
+
+# what were the OTUs we changed in the end? 
+
+altered <- rownames_to_column(as.data.frame(new_physeq1@tax_table@.Data), "OTU")
+altered1 <- altered %>% filter(Family == "Pediciidae") # 380 changed obs! 
+
+nothis <- as.character(unique(altered1$OTU))
+
+# That worked! All the Diptera are now in the family Pediciidae with Genus Ula. 
+
+## Now I just need to merge it back in:
+
+
+oldtax <- rownames_to_column(as.data.frame(batsbugsx@tax_table@.Data), "OTU") %>% 
+  filter(!OTU %in% nothis)  # use the cleaned whole dataset but remove the altered OTUs
+#1507
+
+newtax <- rownames_to_column(as.data.frame(new_physeq1@tax_table@.Data), "OTU") %>% filter(Family == "Pediciidae") # Now have only the data of the edited OTUs
+# 380 obs
+
+mergetax <- merge(newtax, oldtax, all.x = TRUE, all.y = TRUE) #1887 obs
+# 1507+380 = 1887 , good! 
+
+# Now re-insert this data back into the OTU table 
+
+taxmat = as.matrix(mergetax) # also 1887 taxa 
+test <- batsbugsx@tax_table # 1887 taxa 
+
+rownames(taxmat) <- taxmat[,1]
+taxmat <- taxmat[,-1]
+TAX = tax_table(taxmat)
+
+
+## For reporting in the results section 
+batsbugsy <- merge_phyloseq(TAX, sample_data(batsbugsx), otu_table(batsbugsx))
+batsbugsy
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 1887 taxa and 45 samples ]:
+# sample_data() Sample Data:        [ 45 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1887 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+  sample_names(batsbugsy)
+  rank_names(batsbugsy)
+  sample_variables(batsbugsy)
+  
+sort(colSums(otu_table(batsbugsy)))
+quantile(colSums(otu_table(batsbugsy)))
+summary(colSums(otu_table(batsbugsy)))
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 3857    3934    3950    3949    3961    4000 
+
+
+# Quick check 
+plot_bar(batsbugsy, x = "bat.sp", fill = "Order") +
+  xlab(NULL) + geom_bar(stat="identity") + theme_bw() + 
+  scale_colour_brewer(palette="Set1") + 
+  theme(text = element_text(size = 20))  
+
+batsbugsy <- batsbugsy%>%
+ tax_fix(min_length = 0,
+  unknowns = c("NA"),
+  sep = " ", anon_unique = TRUE,
+  suffix_rank = "classified") # Now any unknown family is labeled by its Order 
+checkthis <- ps_melt(batsbugsy) # That worked  #84915 obs 
+
+# prune OTUs that are not present in at least one sample
+bby <- prune_taxa(taxa_sums(batsbugsy) > 0, batsbugsy)
+
+bby # lost three taxa 
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 1804 taxa and 45 samples ]:
+# sample_data() Sample Data:        [ 45 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1804 taxa by 7 taxonomic ranks ]:
+# taxa are rows
+
+## Export this phyloseq object so you dont need to recreate it every time!
+
+# saveRDS(bby, file = file.path(output_today, "BatsBugs_Nas_nontargetSamplesRemoved_fixed.RDS")) #19.11.2023
+# output_today
+
+```
+
+
+###  Calculate prevalence (FOO?) and relative abundance (RRA)
+
+```{r,  unaggregated_summaries, results = "asis", echo = FALSE}
+
+
+######################################################
+### Myotis brandtii  ### 
+######################################################
+
+MBRA <- subset_samples(bby, bat.sp == "MBRA")
+MBRA <- prune_taxa(taxa_sums(MBRA) > 0, MBRA) # Remove taxa not found in MBRA samples 
+MBRA
+# phyloseq-class experiment-level object
+# otu_table()   OTU Table:          [ 660 taxa and 14 samples ]:
+# sample_data() Sample Data:        [ 14 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 660 taxa by 7 taxonomic ranks ]:
+
+## See top occurring taxa 
+
+MBRA.fam <- aggregate_top_taxa2(MBRA, "Family", top = 70)
+
+plot.composition.CountAbun <- plot_composition(MBRA.fam) + 
+  theme_bw() +
+  ggtitle("Top 70 famillies") + 
+  facet_wrap(~ MBRA.fam@sam_data$bat.sp) +
+  theme(legend.position = "bottom") 
+  
+plot.composition.CountAbun
+
+## Prevalence
+prevelancedf = apply(X = otu_table(MBRA),
+                 MARGIN = 1,
+                 FUN = function(x){sum(x > 0)})
+# Add taxonomy and total read counts to this data.frame
+prevelancedf = data.frame(Prevalence = prevelancedf,
+                      TotalAbundance = taxa_sums(MBRA),
+                      tax_table(MBRA))
+prevalentpreyMBRA <- prevelancedf
+# write.csv(prevalentpreyMBRA, file = file.path(output_today, "prevalentpreyMBRA.csv"))
+# output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-21"
+
+## Do this separately for each bat species then recombine with the 
+prevMBRA <- prevalentpreyMBRA %>% rownames_to_column(var = "OTU") %>% 
+  dplyr::select(OTU, Prevalence, TotalAbundance)
+
+str(prevMBRA)
+
+### Calculate relative read abundance
+
+## Per sample per prey species 
+batsbugysrraB  = transform_sample_counts(MBRA, function(x) x / sum(x) )
+batsbugysrradfB <- psmelt(batsbugysrraB) # abundance is now relative abundance 
+batsbugszB <- as.data.frame(dplyr::full_join(batsbugysrradfB, prevMBRA, by = "OTU"))
+
+head(batsbugszB) 
+batsbugszB$BatSpecies <- "M. brandtii" #
+# write.csv(batsbugszB, file = file.path(output_today, "RelativeAbundancePrevalenecCalcAllPreyMBRA.csv"))
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-21
+
+
+######################################################
+### Myotis mystacinus  ### 
+######################################################
+
+MMYS <- subset_samples(bby, bat.sp == "MMYS")
+MMYS <- prune_taxa(taxa_sums(MMYS) > 0, MMYS) 
+# Remove taxa not found in MMYS samples 
+
+MMYS
+# otu_table()   OTU Table:          [ 1275 taxa and 31 samples ]:
+# sample_data() Sample Data:        [ 31 samples by 9 sample variables ]:
+# tax_table()   Taxonomy Table:     [ 1275 taxa by 7 taxonomic ranks ]:
+
+### 
+prevelancedf = apply(X = otu_table(MMYS),
+                 MARGIN = 1,
+                 FUN = function(x){sum(x > 0)})
+
+# Add taxonomy and total read counts to this data.frame
+prevelancedf = data.frame(Prevalence = prevelancedf,
+                      TotalAbundance = taxa_sums(MMYS),
+                      tax_table(MMYS))
+prevalentpreyMMYS <- prevelancedf
+# write.csv(prevalentpreyMMYS, file = file.path(output_today, "prevalentpreyMMYS.csv"))
+# output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-21"
+
+## Do this separately for each bat species then recombine with the 
+prevMMYS <- prevalentpreyMMYS %>% rownames_to_column(var = "OTU") %>% 
+  dplyr::select(OTU, Prevalence, TotalAbundance)
+
+str(prevMMYS)
+
+### Calculate relative read abundance
+
+## Per sample per prey species 
+batsbugysrraM  = transform_sample_counts(MMYS, function(x) x / sum(x) )
+batsbugysrradfM <- psmelt(batsbugysrraM) # abundance is now relative abundance 
+batsbugszM <- as.data.frame(dplyr::full_join(batsbugysrradfM, prevMMYS, by = "OTU"))
+
+head(batsbugszM) 
+batsbugszM$BatSpecies <- "M. mystacinus" #
+# write.csv(batsbugszM, file = file.path(output_today, "RelativeAbundancePrevalenecCalcAllPreyMMYS.csv"))
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-09-21
+
+######################################################
+
+## Combine the two - for visualizing differences 
+
+batsbugszBM <- dplyr::full_join(batsbugszM, batsbugszB)
+summary(batsbugszBM) # 51506 rows 
+
+# write.csv(batsbugszBM, file = file.path(output_today, "bats_abundance_prevalence_Separate_then_combined.csv"))
+# # 26.11.2023
+output_today
+
+
+mdf <- ps_melt(MMYS) #39525
+bdf <- ps_melt(MBRA) #9240
+# 39525 + 9240 = 48765 (same dim for batsbugszBM, good)
+
+# Visualize and compare - Orders 
+# pB <- plot_bar(MBRA, x = "bat.sp", fill = "Order") +
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw()
+# #pB
+# 
+# pM <- plot_bar(MMYS, x = "bat.sp", fill = "Order") +
+#   xlab(NULL) + geom_bar(stat="identity") + theme_bw()
+# #pM
+# 
+# cowplot::plot_grid(pB, pM) +
+#   scale_colour_brewer(palette="Set1") +
+#   theme(text = element_text(size = 20))
+
+```
+
+
+
+
+## Plotting abundance, prevalence, relative abundance across prey orders 
+
+```{r}
+
+prey1 <- batsbugszBM # 48765 obs - prevalence and abundance calculated separate for each bat species then recombined into one dataset 
+
+# Differences in number of counts (raw reads)
+  ggplot() + 
+  geom_count(data = prey1, aes(x = BatSpecies, y = Family, color = Order), alpha = 0.5) + 
+  scale_size(range = c(5, 15)) +
+  theme_bw() + xlab("") + ylab("") + 
+  theme(text = element_text(size = 20)) 
+  # clearly different between bat species 
+  
+
+# Total Abundance 
+  ggplot() + 
+  geom_count(data = prey1, aes(x = BatSpecies, y = Family, size = TotalAbundance, color = Order), alpha = 0.5) + 
+  scale_size(range = c(5, 12)) +
+  theme_bw() + xlab("") + ylab("") +
+  theme(text = element_text(size = 20)) +
+  geom_jitter()
+
+
+# Prevalence
+  ggplot() + 
+  geom_count(data = prey1, aes(x = BatSpecies, y = Family, size = Prevalence, color = Order), alpha = 0.5) + 
+  scale_size(range = c(5, 12)) +
+  theme_bw() + xlab("") + ylab("") +
+  theme(text = element_text(size = 20)) +
+  geom_jitter()
+  
+  
+################################################# 
+### Use this ###
+################################################# 
+  
+  ## FamilyOrders
+  checkthis1 <- prey1 %>% dplyr::select(Family, Order) %>% 
+    distinct() %>% 
+    mutate(Family = factor(Family)) %>% 
+    mutate(Order = factor(Order))
+  # 50 families, 9 orders 
+  
+
+  ## Aggregate to Family level then use RRA - 
+prey3 <- prey1 %>% group_by(BatSpecies, Sample, Family, Order) %>% 
+    dplyr::summarize(FamAbun = sum(TotalAbundance)) ## 1798 obs
+
+checkthis <- prey3 %>% dplyr::select(Family, Order) %>% distinct() %>% arrange(Order) 
+
+listcheck <- as.character(checkthis$Family) %>% unique() # list of 50, good 
+
+prey3$Family <- factor(prey3$Family, levels = listcheck) 
+prey3$Order <- factor(prey3$Order)
+
+famlist <- unique(prey3$Family)
+
+  
+summary(prey3)
+  
+  
+# Now the families are arranged by Order!! 
+
+p <-  ggplot() + 
+  geom_count(data = prey3, aes(x = BatSpecies, y = Family, size = FamAbun, color = Order), alpha = 0.9,) + 
+  scale_size_continuous(range = c(5, 12)) +
+  scale_color_manual(values = met.brewer("Signac", n = 10)) +
+  xlab("") + ylab("") +
+  theme(
+  panel.background = element_rect(fill = "white",
+                                colour = "white",
+                                linewidth = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "#7F7F7F"), 
+  panel.grid.minor = element_line(linewidth = 0.25, linetype = 'solid',
+                                colour = "#7F7F7F")) + 
+  theme(text = element_text(size = 20)) +
+  geom_jitter() + theme(legend.title = element_blank()) +
+  theme(legend.position = "bottom")
+p 
+
+# Range of dot sizes between 10000, 20000 and 30000 
+
+
+
+## THIS goes into the paper   
+## here it is just presence and absence 
+
+    # "#D8443C",   "#9F5691",   "#633372", 
+    # # Diptera   #Lepidoptera #Neuroptera
+    # 
+    # "#E87E8B",   "#92C051",    "#1F6E9C",
+    # #Hymenoptera #Trichoptera #Orthoptera 
+    # 
+    # "#F4C40F", "#2B9B81", "#FE9B00"
+    # #Araneae  #Psocodea   #Coleoptera 
+
+
+p <-  ggplot() + 
+  geom_point(data = prey3, aes(x = BatSpecies, y = Family, color = Order), size = 6) + 
+    scale_color_manual(values = c(
+    "#F4C40F", "#FE9B00", "#D8443C", 
+    "#E87E8B", "#9F5691", "#633372",
+    "#1F6E9C", "#2B9B81", "#92C051")) +
+  xlab("") + ylab("") +
+  theme(
+  panel.background = element_rect(fill = "white",
+                                colour = "white",
+                                size = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "#7F7F7F"), 
+  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "#7F7F7F")) + 
+  theme(text = element_text(size = 20)) +
+  geom_jitter() + theme(legend.title = element_blank()) +
+  theme(legend.position = "bottom")
+p 
+
+
+###### 
+# Proportion of which prey is represented in between the two specie - Relative Abundance
+##### No difference if this is relative or total abundance or even prevalence because it is a proportion 
+
+propbar <- ggplot(prey1) +
+  geom_bar(aes(x=BatSpecies, y = Prevalence, fill = Order), stat = "identity", position = "fill") + 
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = met.brewer("Signac", n = 10)) +
+  xlab("") + ylab("") +
+  theme(
+  panel.background = element_rect(fill = "white",
+                                colour = "white",
+                                size = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "#7F7F7F"), 
+  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "#7F7F7F")) + 
+  theme(text = element_text(size = 25)) 
+propbar +
+  theme(legend.position = "bottom") 
+
+
+### Simple bipartite
+
+bipart <- ggplot(prey1, aes(x = BatSpecies, y = Order, fill = TotalAbundance)) +
+  geom_tile() +
+  scale_fill_gradient(low = "gray", high = "black") + 
+  labs(title = "",
+       x = "",
+       y = "") +  
+  theme(text = element_text(size = 25)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(legend.position = "none") 
+bipart
+
+```
+
+
+## Quick summaries for the results section 
+
+```{r}
+# Summaries for the first paragraph of the results section 
+bbydf <- psmelt(bby) # 81180 obs of 19 vars
+bbydf$Order <- as.factor(bbydf$Order) 
+bbydf <- bbydf %>% droplevels() 
+
+bbydf <- bbydf %>% mutate(across( c(Sample, bat.sp, Order, Family, Genus, Species), factor)) 
+str(bbydf)
+summary(bbydf)
+
+levels(bbydf$Sample)
+levels(bbydf$Species)
+
+
+## Number of unique samples and dates per year
+
+b17 <- bbydf %>% filter(year == 2017) %>% droplevels() # 15 samples
+b17$fdate <- as.factor(b17$date) # 4 distinct nights (many missing)
+
+b18 <- bbydf %>% filter(year == 2018) %>% droplevels() # 30 samples 
+b18$fdate <- as.factor(b18$date) # 7 distinct nights 
+
+## Number of unique samples per year per bat species 
+B17 <- bbydf %>% filter(year == 2017 & bat.sp == "MBRA") %>% droplevels() 
+# 3 samples
+levels(B17$Sample)
+# "1B" "3B" "4B"
+
+
+B18 <- bbydf %>% filter(year == 2018 & bat.sp == "MBRA") %>% droplevels() 
+# 11 samples 
+levels(B18$Sample)
+# "33B" "35B" "36A" "37B" "38B" "39B" "40A" "41B" "42B" "43B" "44B"
+
+M17 <- bbydf %>% filter(year == 2017 & bat.sp == "MMYS") %>% droplevels() 
+# 12 samples
+levels(M17$Sample)
+# "10B" "11B" "12B" "13B" "14B" "15B" "16B" "17B" "5B"  "7B"  "8B"  "9B" 
+
+M18 <- bbydf %>% filter(year == 2018 & bat.sp == "MMYS") %>% droplevels() 
+# 19 samples 
+levels(M18$Sample)
+#  [1] "32B" "34A" "47B" "48A" "49B" "50B" "51B" "54A" "56B" "57B" "58B" "59A" "60B"
+# [14] "61A" "62B" "63A" "64A" "65B" "66B"
+# How many prey taxa for MBRA and MMYS? 
+
+
+## What percentage of each bats diet is Diptera or Lepidoptera? 
+
+mbra <- psmelt(MBRA)
+dim(mbra)
+# 9240   20
+table(mbra$Order)
+    # Diptera Hymenoptera Lepidoptera  Neuroptera Trichoptera 
+    #    4830         322        3402         588          98 
+
+# 4830/9240 = 0.5227273 # Diptera
+# 3402/9240 = 0.3681818 # Lepidoptera
+
+mbra$Species <- as.factor(mbra$Species) # 66 levels 
+
+mmys <- psmelt(MMYS)
+dim(mmys)
+# 39525    20
+table(mmys$Order)
+    # Araneae  Coleoptera     Diptera Hymenoptera Lepidoptera  Neuroptera  Orthoptera    Psocodea Trichoptera 
+    #     248         124       22506          93       14570        1302         186         124         372 
+
+# 22506/39525 # 0.5694118 Diptera
+# 14570/39525 # 0.3686275 Lepidoptera 
+
+mmys$Species <- as.factor(mmys$Species) # 126 levels 
+
+
+## MBRA
+batsbugszB <- batsbugszB %>% mutate(across( c(Sample, bat.sp, BatSpecies, Order, Family, Genus, Species), factor)) 
+str(batsbugszB)
+batsbugszB$Order <- as.factor(batsbugszB$Order) 
+levels(batsbugszB$Order)
+# "Diptera"     "Hymenoptera" "Lepidoptera" "Neuroptera"  "Trichoptera"
+#9240 distinct prey taxa across 5 orders 
+
+## MMYS 
+batsbugszM <- batsbugszM %>% mutate(across( c(Sample, bat.sp, BatSpecies, Order, Family, Genus, Species), factor)) 
+str(batsbugszM)
+batsbugszM$Order <- as.factor(batsbugszM$Order) 
+levels(batsbugszM$Order)
+# "Araneae"     "Coleoptera"  "Diptera"     "Hymenoptera" "Lepidoptera"
+# "Neuroptera"  "Orthoptera"  "Psocodea"    "Trichoptera"
+
+# 39525 prey taxa across 10 orders 
+
+levels(bbydf$Order)
+# [1] "Araneae"     "Coleoptera"  "Diptera"     "Hymenoptera" "Lepidoptera"
+# [6] "Neuroptera"  "Orthoptera"  "Psocodea"    "Trichoptera"
+
+```
+
+## Iris plots 
+```{r}
+
+## Same palette as was used in the earlier figure 
+## Double check that this is color blind safe  
+met.brewer("Signac", n = 9)
+library(colorBlindness)
+orders <- levels(prey3$Order)
+orders
+## What is already in the bar plot
+cvdPlot(replacePlotColor(
+  displayColors(c(
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#2B9B81", "#FE9B00")))) 
+
+  displayColors(c(
+    "#D8443C",   "#9F5691",   "#633372", 
+    # Diptera   #Lepidoptera #Neuroptera
+    
+    "#E87E8B",   "#92C051",    "#1F6E9C",
+    #Hymenoptera #Trichoptera #Orthoptera 
+    
+    "#F4C40F", "#2B9B81", "#FE9B00"))
+    #Araneae  #Psocodea   #Coleoptera 
+  
+  ################################################
+#       "Diptera"     "Hymenoptera" "Lepidoptera" "Neuroptera"  "Trichoptera"
+mbracols <- c("#D8443C",   "#E87E8B",  "#9F5691",    "#633372",    "#92C051") 
+bby %>% 
+  tax_transform(trans = "clr", rank = "Order") %>% 
+  ord_calc() %>% 
+  ord_plot_iris(
+    tax_level = "Order", 
+    ord_plot = "none", 
+    anno_colour = "bat.sp",
+    anno_binary_style = list(y = 1.05, colour = "gray50", shape = "circle", size = 2)) + 
+  scale_fill_manual(values = c(
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#2B9B81", "#FE9B00")) +
+    scale_color_manual(values = c("black", "gray")) +
+  theme(legend.position = "bottom")
+
+
+## Separate iris plots for each bat species, side by side: 
+## clr = log ratio transformation
+MBRA %>% 
+  tax_transform(trans = "clr", rank = "Order") %>% 
+  ord_calc() %>% 
+  ord_plot_iris(tax_level = "Order", ord_plot = "none", anno_colour = "bat.sp") +
+    scale_fill_manual(values = c(    
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051")) +
+  scale_color_manual(values = "white") +
+  theme(legend.position = "none") +
+MMYS %>% 
+  tax_transform(trans = "clr", rank = "Order") %>% 
+  ord_calc() %>% 
+  ord_plot_iris(tax_level = "Order", ord_plot = "none", anno_colour = "bat.sp") +
+    scale_fill_manual(values = c(    
+    "#D8443C", "#9F5691", "#633372", 
+    "#1F6E9C", "#F4C40F", "#92C051", 
+    "#2B9B81", "#E87E8B", "#FE9B00")) +
+   theme(legend.position = "none") +
+    scale_color_manual(values = "white")  
+
+# checked with legends that the colors matched and then removed for the final figure. 
+test <- tax_fix(batsbugsy)
+
+### Composition bar plots
+test %>%  
+  comp_barplot(tax_level = "Order") +
+  scale_fill_manual(values = c(
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#2B9B81", "#FE9B00")) +
+    scale_color_manual(values = "white") +
+  coord_flip() +
+  theme(text = element_text(size = 25))+
+  theme(legend.position = "none") # the legend matches 
+
+
+MBRA %>%
+  comp_barplot(tax_level = "Order") +
+  scale_fill_manual(values = c(    
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051")) +
+    scale_color_manual(values = "white") +
+  coord_flip() +
+  theme(text = element_text(size = 25)) +
+  theme(legend.position = "none")
+
+MMYS %>%
+  comp_barplot(tax_level = "Order") +
+  scale_fill_manual(values = c(    
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#2B9B81", "#FE9B00")) +
+    scale_color_manual(values = "white") +
+  coord_flip() +
+  theme(text = element_text(size = 25))  +
+  theme(legend.position = "none")
+
+#¤ Just for the legend 
+batsbugsy %>%
+  comp_barplot(tax_level = "Order") +
+  scale_fill_manual(labels = c("Diptera", "Lepidoptera", "Neuroptera",
+                               "Hymenoptera", "Trichoptera", "Orthoptera",
+                               "Araneae", "Hemioptera", "Psocodea"), 
+                    values = c(    
+    "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#2B9B81", "#FE9B00")) +
+    scale_color_manual(values = "white") +
+  coord_flip() +
+  theme(text = element_text(size = 25))+
+  theme(legend.position = "bottom")
+
+```
+
+### Alpha and beta diversity 
+ - Jaccard distances
+ - Unweighted unifrac 
+ 
+*Notes from FH:*
+Why did you use shannon? This index is icorporating the quantity if the sequences. This is a tricky thing in metabarcoding. If we asume, that a bat has eaten one big beatle and one tiny mosquito, we would maybe find many more beatle sequences in the dataset than mosquito sequences even thought the bat ate the identical number of individuals. Therefore, I would maybe use and index that is just quality based ( "Observed Features" or "Faith's PD")...
+I think it would be better to use distance matrix that is solely based on presence absence ( Jaccard distance or unweighted unifrac)
+
+```{r}
+
+## Create a presence/column 
+
+# "By default, this function implements a filter used by Subramanian et al., Nature, 2014. It selects those OTUs/ASVs present at or above a level of confident detection (0.1% relative abundance) in at least 2 samples. This filter, especially using DADA2 data, results in a strong reduction of taxa, yet the total number of reads should not drop too much. Always be considerate when using these filters, e.g. when running alpha-diversity measures it might not be appropriate to use."
+
+
+bby_pa <- bby %>% tax_transform("binary")
+bby_pa1 <- as_phyloseqbby_pa 
+
+bby_padf <- psmelt(bby_pa) # Check that this indeed creates a presence/absence dataset
+# 81180 of 20 vars, retains lower taxa descriptions (gooood) 
+
+# Some basic housekeeping
+bby_pa@sam_data$sampleid <- as.factor(bby_pa@sam_data$sample.nr)
+MBRA@sam_data$sampleid <- as.factor(MBRA@sam_data$sample.nr)
+MMYS@sam_data$sampleid <- as.factor(MMYS@sam_data$sample.nr)
+
+bby_pa@sam_data$bat.sp <- as.factor(bby_pa@sam_data$bat.sp)
+MBRA@sam_data$bat.sp <- as.factor(MBRA@sam_data$bat.sp)
+MMYS@sam_data$bat.sp <- as.factor(MMYS@sam_data$bat.sp)
+
+#### Alpha diversity 
+# https://docs.onecodex.com/en/articles/4136553-alpha-diversity
+# "This is the most simple alpha diversity metric. It just counts up the number of different taxa you observe in a sample at a given taxonomic level, usually species." 
+
+alphadiv <- alpha(bby_pa, index = "observed")
+alphadiv <- rownames_to_column(alphadiv)
+alphadiv <- alphadiv %>% dplyr::rename(Sample = rowname)
+alphadiv <- alphadiv %>% dplyr::rename(observed.alpha = observed)
+
+bby_padf <- as.data.frame(bby_padf)
+alphadiv <- as.data.frame(alphadiv)
+
+pa_alpha <- dplyr::left_join(bby_padf, alphadiv)
+
+# write.csv(pa_alpha, file = file.path(output_today, "Abundance_is_presence_absence_w_Observed_alphadiversity.csv")) #18.11.2023
+
+## Probably easiest to simply show as a boxplot 
+## Plot the predictions and the raw data 
+batcolors = c("#b3cde0", "#011f4b") 
+
+batsbugsy@sam_data$sampleid <- as.factor(batsbugsy@sam_data$sample.nr)
+MBRA@sam_data$sampleid <- as.factor(MBRA@sam_data$sample.nr)
+MMYS@sam_data$sampleid <- as.factor(MMYS@sam_data$sample.nr)
+
+plot_richness(bby_pa, x="bat.sp", measures="Observed")+
+  geom_boxplot(aes(fill = bat.sp), color = c("black", "lightgray")) +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + theme_bw() 
+
+## Use a simple model to see if there is any difference in predicted results
+
+
+#### Beta diversity 
+## Different ordination approach 
+# https://david-barnett.github.io/microViz/articles/web-only/ordination.html
+# jac = distance(bby_pa, method = "jaccard", binary = TRUE) 
+# 
+# jac.pcoa = ordinate(bby1, method="PCoA", distance=jac)
+
+jac1 <- dist_calc(bby_pa, dist = "jaccard", binary = TRUE)
+
+
+### Ordination - Jaccard - Species 
+jac <- bby %>%
+  tax_transform("binary", rank = "Species") %>%
+  dist_calc(dist = "jaccard", binary = TRUE) %>% #
+  ord_calc("PCoA") %>%
+  ord_plot(color = "bat.sp", shape = "year", size = 4, alpha = 0.8) +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +
+  stat_ellipse(geom = "polygon", type="t", alpha=0.3, aes(fill =bat.sp)) +
+  theme_bw() +
+  ggside::geom_xsidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void() + 
+  theme(legend.position = "none")
+
+### Ordination - Bray - Curtis - Species 
+bray <- bby %>%
+  tax_transform("log", rank = "Species") %>%
+  dist_calc(dist = "bray", binary = FALSE) %>% #
+  ord_calc("PCoA") %>%
+  ord_plot(color = "bat.sp", shape = "year", size = 4, alpha = 0.8) +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +
+  stat_ellipse(geom = "polygon", type="t", alpha=0.3, aes(fill =bat.sp)) +
+  theme_bw() +
+  ggside::geom_xsidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void() + 
+  theme(legend.position = "none")
+
+bray
+
+cowplot::plot_grid(jac, bray, labels = c("a.", "b."))
+
+### Ordination - Jaccard - Genus 
+bby %>%
+  tax_transform("binary", rank = "Genus") %>%
+  dist_calc(dist = "jaccard", binary = TRUE) %>% #
+  ord_calc("PCoA") %>%
+  ord_plot(color = "bat.sp", shape = "year", size = 4, alpha = 0.8) +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +
+  stat_ellipse(geom = "polygon", type="t", alpha=0.3, aes(fill =bat.sp)) +
+  theme_bw() +
+  ggside::geom_xsidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void() + 
+  theme(legend.position = "none")
+
+### Ordination - NMDS 
+bby %>%
+  tax_transform("binary", rank = "Species") %>%
+  dist_calc(dist = "jaccard", binary = TRUE) %>% #
+  ord_calc("NMDS") %>%
+  ord_plot(color = "bat.sp", shape = "year", size = 4, alpha = 0.8) +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +
+  stat_ellipse(geom = "polygon", type="t", alpha=0.3, aes(fill =bat.sp)) +
+  theme_bw() +
+  ggside::geom_xsidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = bat.sp), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void() + 
+  theme(legend.position = "none")
+
+
+# Warning messages:
+# 1: In metaMDS(veganifyOTU(physeq), distance, ...) :
+#   stress is (nearly) zero: you may have insufficient data
+# 2: In postMDS(out$points, dis, plot = max(0, plot - 1), ...) :
+#   skipping half-change scaling: too few points below threshold
+
+bby_njac <- ordinate(bby_pa, "PCoA", "jaccard")
+
+
+### Extract the scores 
+jacbeta <- bby %>%
+  tax_transform("binary", rank = "Species") %>%
+  dist_calc(dist = "jaccard", binary = TRUE) %>% #
+  ord_calc("PCoA") %>% ord_plot()
+
+
+## combine with the dataset that has alpha diversity 
+
+
+
+
+# 19.11.2023 
+# write.csv(pa1, file = file.path(output_today, "jaccard_binary_pcoa.csv"))
+# write.csv(pa2, file = file.path(output_today, "jaccard_binary_nmds.csv"))
+
+
+```
+
+
+
+
+
+# Permanova and adonis 
+
+https://deneflab.github.io/MicrobeMiseq/demos/mothur_2_phyloseq.html 
+
+```{r, results = "asis"}
+
+grDevices::windows() # for plots in a separate window
+# ------------------------------------------------------------
+
+pa_scale <- bby %>% tax_transform("binary", rank = "Species")
+jac <- phyloseq::distance(pa_scale, method = "jaccard")
+
+abun_scale <- bby %>% tax_transform("log", rank = "Species")
+bray <- phyloseq::distance(abun_scale, method = "bray")
+
+
+sampledf <- data.frame(sample_data(bby))
+
+### Homogeneity of dispersion test
+
+jbeta <- betadisper(jac, sampledf$bat.sp)
+permutest(jbeta)
+# Permutation test for homogeneity of multivariate dispersions
+# Permutation: free
+# Number of permutations: 999
+# 
+# Response: Distances
+#           Df   Sum Sq   Mean Sq     F N.Perm Pr(>F)
+# Groups     1 0.004712 0.0047117 2.296    999  0.137
+# Residuals 43 0.088242 0.0020521   
+
+# "This output tells us that our adonis test is significant so we can reject the null hypothesis that our (two bat species) have the same centroid.
+# 
+# Additionally, our betadisper results are not significant, meaning we cannot reject the null hypothesis that our groups have the same dispersions. This means we can be more confident that our adonis result is a real result, and not due to differences in group dispersions.
+
+# Further notes: 
+# There is a lot more analysis that can be done here. We could use a distance metric other than Bray-curtis, we could test different grouping variables, or we could create a more complex permanova by testing a model that combines multiple variables. Unfortunately, there are currently no post-hoc tests developed for adonis."
+
+bbeta <- betadisper(bray, sampledf$bat.sp)
+permutest(bbeta)
+# 
+# Permutation test for homogeneity of multivariate dispersions
+# Permutation: free
+# Number of permutations: 999
+# 
+# Response: Distances
+#           Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+# Groups     1 0.003875 0.0038751 0.6277    999  0.434
+# Residuals 43 0.265476 0.0061739 
+
+# Adonis test - bat species only 
+#############################################################
+
+## Jaccard
+j3 <- adonis2(jac ~ bat.sp, data = sampledf)
+j3
+# Permutation test for adonis under reduced model
+# Terms added sequentially (first to last)
+# Permutation: free
+# Number of permutations: 999
+# 
+# adonis2(formula = jac ~ bat.sp, data = sampledf)
+#          Df SumOfSqs      R2      F Pr(>F)  
+# bat.sp    1   0.6495 0.03325 1.4791  0.011 *
+# Residual 43  18.8825 0.96675                
+# Total    44  19.5320 1.00000                
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## Bray - Curtis 
+b3 <- adonis2(bray ~ bat.sp, data = sampledf)
+b3
+# Permutation test for adonis under reduced model
+# Terms added sequentially (first to last)
+# Permutation: free
+# Number of permutations: 999
+# 
+# adonis2(formula = bray ~ bat.sp, data = sampledf)
+#          Df SumOfSqs      R2     F Pr(>F)  
+# bat.sp    1   0.6134 0.03434 1.529  0.034 *
+# Residual 43  17.2509 0.96566               
+# Total    44  17.8644 1.00000               
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# 
+# # plot(allEffects(m1), type = "response")
+# # plot(allEffects(m2), type = "response")
+# # plot(allEffects(m3), type = "response")
+# 
+# plot(allEffects(miv), type = "response")
+# plot(allEffects(mv), type = "response")
+
+# Adonis test - bat species and year
+############################################################
+
+## Jaccard
+j2 <- adonis2(jac ~ bat.sp + year, data = sampledf)
+j2
+# Permutation test for adonis under reduced model
+# Terms added sequentially (first to last)
+# Permutation: free
+# Number of permutations: 999
+# 
+# adonis2(formula = jac ~ bat.sp + year, data = sampledf)
+#          Df SumOfSqs      R2      F Pr(>F)   
+# bat.sp    1   0.6495 0.03325 1.4933  0.004 **
+# year      1   0.6157 0.03152 1.4156  0.015 * 
+# Residual 42  18.2668 0.93523                 
+# Total    44  19.5320 1.00000                 
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## Bray - Curtis 
+b2 <- adonis2(bray ~ bat.sp + year, data = sampledf)
+b2
+# Permutation test for adonis under reduced model
+# Terms added sequentially (first to last)
+# Permutation: free
+# Number of permutations: 999
+# 
+# adonis2(formula = bray ~ bat.sp + year, data = sampledf)
+#          Df SumOfSqs      R2      F Pr(>F)  
+# bat.sp    1   0.6134 0.03434 1.5512  0.037 *
+# year      1   0.6415 0.03591 1.6222  0.030 *
+# Residual 42  16.6094 0.92975                
+# Total    44  17.8644 1.00000                
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+
+
+# Adonis test - bat species and year and the interaction 
+############################################################
+
+## Jaccard
+j1 <- adonis2(jac ~ bat.sp + year + bat.sp*year, data = sampledf)
+j1
+# Permutation test for adonis under reduced model
+# Terms added sequentially (first to last)
+# Permutation: free
+# Number of permutations: 999
+# 
+# adonis2(formula = jac ~ bat.sp + year + bat.sp * year, data = sampledf)
+#             Df SumOfSqs      R2      F Pr(>F)   
+# bat.sp       1   0.6495 0.03325 1.5117  0.004 **
+# year         1   0.6157 0.03152 1.4329  0.010 **
+# bat.sp:year  1   0.6511 0.03333 1.5154  0.010 **
+# Residual    41  17.6157 0.90189                 
+# Total       44  19.5320 1.00000                 
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## Bray - Curtis 
+b1 <- adonis2(bray ~ bat.sp + year + bat.sp*year, data = sampledf)
+b1
+# Permutation test for adonis under reduced model
+# Terms added sequentially (first to last)
+# Permutation: free
+# Number of permutations: 999
+# 
+# adonis2(formula = bray ~ bat.sp + year + bat.sp * year, data = sampledf)
+#             Df SumOfSqs      R2      F Pr(>F)  
+# bat.sp       1   0.6134 0.03434 1.5776  0.030 *
+# year         1   0.6415 0.03591 1.6498  0.027 *
+# bat.sp:year  1   0.6671 0.03734 1.7157  0.022 *
+# Residual    41  15.9423 0.89241                
+# Total       44  17.8644 1.00000                
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+#################################################################
+
+library(modelsummary)
+library(kableExtra)
+library(gt)
+library(readxl)
+library(xlsx)
+library(jtools)
+library(huxtable)
+library(LaTeZ)
+
+
+fitlist <- list(j1, j2, j3, b1, b2, b3)
+
+
+kbl(j1, digits = 2, format = "html")
+kbl(j2, digits = 2, format = "html")
+kbl(j3, digits = 2, format = "html")
+
+kbl(fitlist,digits = 2, format = "html", booktabs = T, caption.short = T)
+
+fitlist %>%
+  kbl(booktabs = TRUE) %>%
+  kable_paper(full_width = FALSE) %>% 
+  add_header_above()
+
+```

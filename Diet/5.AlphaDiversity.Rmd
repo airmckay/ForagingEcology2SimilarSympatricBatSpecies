@@ -1,0 +1,260 @@
+---
+title: "5.AlphaDiversity"
+output: html_document
+date: "2026-03-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+##############################################################
+library(tidyverse)
+library(lattice)
+library(MASS)
+library(ggplot2)
+library(insight)
+library(tidyverse)
+library(nlme)
+library(broom)
+library(modelsummary)
+library(kableExtra)
+library(gt)
+library(readxl)
+library(xlsx)
+library(DHARMa)
+
+
+# remove.packages("lme4")
+
+##############################################################
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/Diet_Myotis_brandts_mystacinus"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "AlphaDiversity"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+pa <- read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Nittedal_modeling pt1_2023-11-18/Abundance_is_presence_absence_w_Observed_alphadiversity.csv")
+## 81180 obs of 22 vars 
+
+```
+
+
+
+```{r}
+
+ 
+#Selecting only the variables that you need
+dat <- pa %>%
+  dplyr::select(Sample, bat.sp, year, observed.alpha)
+
+str(dat)
+
+#Make Sample bat.sp year factors
+dat$Sample <- factor(dat$Sample)
+dat$bat.sp <- factor(dat$bat.sp )
+dat$year <- factor(dat$year)
+
+str(dat)
+#Since observed.alpha is identical for all rows within each Sample, you just need to collapse the dataset to one row per Sample
+
+#Collapse to one row per Sample
+# 45 obs of 4 vars
+dat_alpha <- dat %>%
+  group_by(Sample, bat.sp, year) %>%
+  summarise(
+    observed.alpha = first(observed.alpha),
+    .groups = "drop"
+  )
+
+head(dat_alpha)
+tail(dat_alpha)
+
+m.full <- glm(observed.alpha ~ year + bat.sp + year:bat.sp, family = poisson, data = dat_alpha)
+summary(m.full)
+
+
+#                    Estimate   Std. Error z value Pr(>|z|)    
+#(Intercept)          3.93834    0.08058  48.874   <2e-16 ***
+#  year2018           -0.01009    0.09101  -0.111    0.912    
+#bat.spMMYS          -0.02299    0.09030  -0.255    0.799    
+#year2018:bat.spMMYS -0.02751    0.10504  -0.262    0.793  
+
+m.red1 <- glm(observed.alpha ~ year + bat.sp, family = poisson, data = dat_alpha)
+summary(m.red1)
+
+#             Estimate Std. Error z value Pr(>|z|)    
+#(Intercept)  3.95447    0.05156  76.702   <2e-16 ***
+#year2018    -0.03070    0.04540  -0.676    0.499    
+#bat.spMMYS  -0.04328    0.04608  -0.939    0.348 
+
+m.red2 <- glm(observed.alpha ~ bat.sp, family = poisson, data = dat_alpha)
+summary(m.red2)
+#            Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)  3.93042    0.03745 104.950   <2e-16 ***
+#  bat.spMMYS  -0.03795    0.04539  -0.836    0.403 
+
+
+
+#Check if model fits the data
+sim_res <- simulateResiduals(m.full)
+
+plot(sim_res)
+
+testDispersion(sim_res) #Your Poisson GLM is clearly overdispersed - fit a negative binomial model instead
+
+
+# Negative binomial version of the full model
+m.full.nb <- glm.nb(observed.alpha ~ year*bat.sp, data = dat_alpha)
+ 
+# Check the summary
+summary(m.full.nb)
+#                    Estimate Std. Error z value Pr(>|z|)    
+#(Intercept)          3.93834    0.15211  25.892   <2e-16 ***
+#  year2018            -0.01009    0.17165  -0.059    0.953    
+#bat.spMMYS          -0.02299    0.17017  -0.135    0.893    
+#year2018:bat.spMMYS -0.02751    0.19749  -0.139    0.889  
+
+# Negative binomial version of the reduced model 1
+m.red1.nb <- glm.nb(observed.alpha ~ year + bat.sp, data = dat_alpha)
+
+# Check the summary
+summary(m.red1.nb)
+# Estimate Std. Error z value Pr(>|z|)    
+#(Intercept)  3.95468    0.09697  40.783   <2e-16 ***
+#year2018    -0.03088    0.08489  -0.364    0.716    
+#bat.spMMYS  -0.04343    0.08636  -0.503    0.615  
+
+# Negative binomial version of the reduced model 2
+m.red2.nb <- glm.nb(observed.alpha ~  bat.sp, data = dat_alpha)
+
+# Check the summary
+summary(m.red2.nb)
+# Estimate Std. Error z value Pr(>|z|)    
+#(Intercept)  3.93042    0.07062  55.657   <2e-16 ***
+#bat.spMMYS  -0.03795    0.08523  -0.445    0.656      
+ 
+
+# --- Estimated means (predicted values) on the measurement scale ---
+#if(!require(emmeans)) install.packages("emmeans")
+library(emmeans)
+
+# Reduced model 2 (only bat.sp)
+emm.red2.nb <- emmeans(m.red2.nb, ~ bat.sp)
+emm.red2.nb_resp <- summary(emm.red2.nb, type = "response")
+print(emm.red2.nb_resp)
+# bat.sp response   SE  df asymp.LCL asymp.UCL
+#MBRA       50.9 3.60 Inf      44.3      58.5
+#MMYS       49.0 2.34 Inf      44.7      53.8
+#Confidence level used: 0.95 
+#Intervals are back-transformed from the log scale
+
+```
+
+
+
+```{r}
+
+## For the paper, only plot the raw values 
+mbra2017 <- pa %>% filter(bat.sp == "MBRA" & year == "2017") %>% droplevels() # 3 samples
+mmys2017 <- pa %>% filter(bat.sp == "MMYS" & year == "2017") %>% droplevels() # 12
+
+mbra2018 <- pa %>% filter(bat.sp == "MBRA" & year == "2018") %>% droplevels() # 11 samples
+mmys2018 <- pa %>% filter(bat.sp == "MMYS" & year == "2018") %>% droplevels() # 19 
+
+
+pa <- pa %>% mutate(yearplot = case_when(
+  year == "2017" & bat.sp == "MBRA" ~ "2017, n = 3", 
+  year == "2017" & bat.sp == "MMYS" ~ "2017, n = 12", 
+  year == "2018" & bat.sp == "MBRA" ~ "2018, n = 11", 
+  year == "2018" & bat.sp == "MMYS" ~ "2018, n = 19", 
+  
+))
+
+mbra <- pa %>% filter(bat.sp == "MBRA") %>% droplevels()
+mmys <- pa %>% filter(bat.sp == "MMYS") %>% droplevels()
+
+# For the facet labels 
+bat.labs <- c("M. brandtii", "M. mystacinus")
+names(bat.labs) <- c("MBRA", "MMYS")
+batcolors = c("#b3cde0", "#011f4b")
+
+rawplotmbra <- ggplot(mbra) + 
+  geom_violin(aes(x = yearplot, y= observed.alpha), fill = "#b3cde0") +
+  geom_boxplot(aes(x = yearplot, y= observed.alpha), fill = "#b3cde0",  
+               alpha = 0.5, color = c("black", "black")) + 
+  theme_bw() +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +
+  scale_x_discrete(labels= 
+                     expression(italic("2017, n = 3"),italic("2018, n = 11"))) +  
+  xlab("") + ylab("Alpha diversity (Observed)") +
+  ylim(c(0,80)) + 
+  theme(strip.background = element_blank()) +
+  theme(text = element_text(size = 15)) +
+  theme(legend.position="none", 
+        axis.text.x=element_text(angle=45,hjust=1,vjust=1,size=12)) + 
+  theme(strip.text.x = element_text(face = "bold.italic")) +
+  ggtitle(expression(italic("M. brandtii")))
+rawplotmbra
+
+
+rawplotmmys<- ggplot(mmys) + 
+  geom_violin(aes(x = yearplot, y= observed.alpha), fill = "#011f4b") +
+  geom_boxplot(aes(x = yearplot, y= observed.alpha), fill = "#011f4b",  alpha = 0.5, color = c("gray", "gray")) + 
+  theme_bw() +
+  scale_colour_manual(values = batcolors,  aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +
+  scale_x_discrete(labels= 
+                     expression(italic("2017, n = 12"),italic("2018, n = 19"))) +  
+  xlab("") + ylab("Alpha diversity (Observed)") +
+  ylim(c(0,80)) + 
+  theme(strip.background = element_blank()) +
+  theme(text = element_text(size = 15)) +
+  theme(legend.position="none", 
+        axis.text.x=element_text(angle=45,hjust=1,vjust=1,size=12)) + 
+  theme(strip.text.x = element_text(face = "bold.italic"))+
+  ggtitle(expression(italic("M. mystacinus")))
+rawplotmmys
+
+rawplots <- cowplot::plot_grid(rawplotmbra, rawplotmmys, labels = c("a.", "b."))
+rawplots
+
+
+##### Calculate coeffcient of variation for each species 
+#calculate CV
+mbra_cv <- sd(mbra$observed.alpha) / mean(mbra$observed.alpha) * 100
+mbra_cv
+# 26.47408
+
+#display CV
+mmys_cv <- sd(mmys$observed.alpha) / mean(mmys$observed.alpha) * 100
+mmys_cv
+# 24.07862
+
+```
+
+
+
+
+
+
+
+
+
+

@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ## March 2025
 
 
-
 # Set up the work space
 ```{r}
 ##############################################################
