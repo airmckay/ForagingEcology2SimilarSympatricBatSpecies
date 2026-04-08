@@ -929,7 +929,7 @@ cowplot::plot_grid(p1, p2, p3, p4, nrow = 4,
                    hjust = -0.5, vjust = -0.5) +
   theme(text = element_text(size=16)) 
 
-ggsave(path = output_today, filename = "Fig3.tiff", width = 9, height = 12, device='tiff', dpi=300)
+ggsave(path = output_today, filename = "Fig3.tiff", width = 9, height = 12, device='tiff', dpi=600)
 
 
 cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, 
@@ -939,6 +939,9 @@ cowplot::plot_grid(p1, p2, p3, p4, nrow = 2,
   theme(text = element_text(size=16)) 
 
 ggsave(path = output_today, filename = "Fig3_forKappa.tiff", width = 10, height = 7, device='tiff', dpi=300)
+
+
+output_today
 ```
 
 

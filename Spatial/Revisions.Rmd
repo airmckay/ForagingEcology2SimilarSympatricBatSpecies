@@ -90,11 +90,11 @@ library(gridExtra)
 library(raster)
 library(leaflet)
 library(terra)
-
+library(magick)
+library(pdftools)
 ##############################################################
 getwd()
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/Diet_Myotis_brandts_mystacinus"
-
+# C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/ForagingEcology2SimilarSympatricBatSpecies/ForagingEcology2SimilarSympatricBatSpecies
 output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
 
 file.name <- "Revisions"
@@ -112,7 +112,6 @@ output_today
 
 
 ## Input
-
 df <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/batdata.csv", delim =";")
 
 cap <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/capture (2).csv", delim =";")
@@ -311,6 +310,38 @@ summary(summary_stats)
  #                    Mean   :0.32303   Mean   : 59.73   Mean   :12.385                     
  #                    3rd Qu.:0.44954   3rd Qu.: 63.78   3rd Qu.:13.059                     
  #                    Max.   :1.05177   Max.   :254.08   Max.   :41.964 
+
+
+```
+
+## Convert figures to correct formats
+```{r}
+
+fig1 <- image_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/Fig1.png")
+
+image_write(fig1, path = file.path(output_today,"Fig1.tiff"), format = "tiff",
+ compression = "lzw",
+  density = 600
+)
+
+fig2<- 
+image_read_pdf(
+  "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/Fig2.pdf",
+  density = 600    # controls resolution (important!)
+)
+
+image_write(fig2, path = file.path(output_today,"Fig2.tiff"), format = "tiff",
+ compression = "lzw",
+  density = 600
+)
+
+fig4 <- image_read_pdf("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/Fig4.pdf", density = 600)  # controls resolution (important!)
+
+
+image_write(fig4, path = file.path(output_today,"Fig4.tiff"), format = "tiff",
+ compression = "lzw",
+  density = 600
+)
 
 
 ```
