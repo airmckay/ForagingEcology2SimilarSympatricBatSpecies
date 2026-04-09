@@ -317,12 +317,17 @@ summary(summary_stats)
 ## Convert figures to correct formats
 ```{r}
 
+## Figure 1 
+
 fig1 <- image_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/Fig1.png")
 
 image_write(fig1, path = file.path(output_today,"Fig1.tiff"), format = "tiff",
  compression = "lzw",
   density = 600
 )
+
+
+## Figure 2 
 
 fig2<- 
 image_read_pdf(
@@ -335,13 +340,56 @@ image_write(fig2, path = file.path(output_today,"Fig2.tiff"), format = "tiff",
   density = 600
 )
 
-fig4 <- image_read_pdf("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/Fig4.pdf", density = 600)  # controls resolution (important!)
+
+## Figure 4 
+fig4 <- image_read_pdf("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/archive/Fig4.pdf", density = 600)  # controls resolution (important!)
 
 
 image_write(fig4, path = file.path(output_today,"Fig4.tiff"), format = "tiff",
  compression = "lzw",
+  density = 300
+)
+
+### Error message while trying to upload to the manuscript submission portal
+# "The dimensions of this image (in pixels) are too large to be converted. For this image to convert, the total number of pixels (height x width) must be less than 40,000,000 (40 megapixels). 
+
+
+fig4.temp<- image_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Revisions_2026-04-09/Fig4.tiff")  # controls resolution (important!)
+
+
+fig4info <- image_info(fig4.temp)
+#   format width height colorspace matte filesize density
+#   <chr>  <int>  <int> <chr>      <lgl>    <int> <chr>  
+# 1 TIFF    6792   7850 sRGB       TRUE   7978236 300x300
+
+6792*7850
+#53,317,200 - needs to be 40,000,000 
+
+
+## Now we resize the image 
+fig4_40mp <- image_resize(fig4.temp, "4899x8000!")
+
+#fig4_40mp <- image_density(fig4_40mp, "600x600")
+
+image_write(fig4_40mp, path = file.path(output_today,"Fig4_.tiff"), format = "tiff",
+ compression = "lzw",
   density = 600
 )
+
+
+## This did not work so well, might need to save as a smaller image first and then conver to TIFF 
+
+
+## Teaser image 
+teaser <- image_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Manuscript/Submission_Journal_Of_Mammology/Re-submission_03.2026/Teaser.png", density = 600)  # controls resolution (important!)
+
+
+image_write(teaser, path = file.path(output_today,"Teaser.tiff"), 
+format = "tiff",
+ compression = "lzw",
+  density = 600
+)
+
 
 
 ```
