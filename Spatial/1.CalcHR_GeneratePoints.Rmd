@@ -299,8 +299,7 @@ MMYSll <- spTransform(MMYS, CRS("+proj=longlat"))
 
 leaflet() %>% addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% 
   addCircleMarkers(data = MBRAll, radius = 3, color = "#32a5ff", fillOpacity = 0.5) %>% 
-  addCircleMarkers(data = MMYSll, radius = 3, color = "#011f4b", fillOpacity = 0.5) #%>% 
-  #addPolygons(range95ll, color = "gray")
+  addCircleMarkers(data = MMYSll, radius = 3, color = "#011f4b", fillOpacity = 0.5) 
 
 # leaflet() %>% addProviderTiles("CartoDB.DarkMatter")
 
@@ -2734,52 +2733,65 @@ mean(c(0.46,
 ## Plot the home ranges for each bat individual but with species as different panels
 batcolors <- c("#32a5ff", "#011f4b")
 #                MBRA      MMYS
+
+Astrid_sf <- st_as_sf(Astrid)
+range95Astrid_sf<- st_as_sf(range95Astrid)
+
+Dagny_sf <- st_as_sf(Dagny)
+range95Dagny_sf <- st_as_sf(range95Dagny)
+
+Kaja_sf <- st_as_sf(Kaja)
+range95Kaja_sf <- st_as_sf(range95Kaja)
+
+Maren_sf <- st_as_sf(Maren)
+range95Maren_sf <- st_as_sf(range95Maren)
+
+Nora_sf <- st_as_sf(Nora)
+range95Nora_sf <- st_as_sf(range95Nora)
+
+
+
 #Brandts
 BrandtsHR<-
-  tm_shape(Amelia, bbox = bound_box) + 
+  tm_shape(Astrid_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
-tm_shape(range95Amelia) + 
+tm_shape(range95Astrid_sf) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
   
-  tm_shape(Dagny, bbox = bound_box) + 
+  tm_shape(Dagny_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
-tm_shape(range95Dagny) + 
+tm_shape(range95Dagny_sf) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
 
-  tm_shape(Kaja, bbox = bound_box) + 
+  tm_shape(Kaja_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
-tm_shape(range95Kaja) + 
+tm_shape(range95Kaja_sf) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
 
-  tm_shape(Maren, bbox = bound_box) + 
+  tm_shape(Maren_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
-tm_shape(range95Maren) + 
+tm_shape(range95Maren_sf) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
   
-  tm_shape(Nora, bbox = bound_box) + 
+  tm_shape(Nora_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
-tm_shape(range95Nora) + 
+tm_shape(range95Nora_sf) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
   
   tm_shape(Phoebe, bbox = bound_box) + 
   tmap_mode('view') +
@@ -2788,7 +2800,6 @@ tm_shape(range95Nora) +
 tm_shape(range95Phoebe) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
 
   tm_shape(Sofia, bbox = bound_box) + 
   tmap_mode('view') +
@@ -2797,7 +2808,6 @@ tm_shape(range95Phoebe) +
 tm_shape(range95Sofia) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
   
   tm_shape(Steffi, bbox = bound_box) + 
   tmap_mode('view') +
@@ -2806,8 +2816,6 @@ tm_shape(range95Sofia) +
 tm_shape(range95Steffi) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-
   
   tm_shape(Thea, bbox = bound_box) + 
   tmap_mode('view') +
@@ -2816,7 +2824,6 @@ tm_shape(range95Steffi) +
 tm_shape(range95Thea) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE)  +
   tm_scale_bar(position = c("top", "right"), width = 200, text.size = 15) 
 
 
