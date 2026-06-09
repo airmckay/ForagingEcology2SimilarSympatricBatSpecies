@@ -2734,6 +2734,7 @@ mean(c(0.46,
 batcolors <- c("#32a5ff", "#011f4b")
 #                MBRA      MMYS
 
+### MBRA ### 
 Astrid_sf <- st_as_sf(Astrid)
 range95Astrid_sf<- st_as_sf(range95Astrid)
 
@@ -2749,82 +2750,103 @@ range95Maren_sf <- st_as_sf(range95Maren)
 Nora_sf <- st_as_sf(Nora)
 range95Nora_sf <- st_as_sf(range95Nora)
 
+Phoebe_sf <- st_as_sf(Phoebe)
+range95Phoebe_sf <- st_as_sf(range95Phoebe)
 
+Sofia_sf <- st_as_sf(Sofia)
+range95Sofia_sf <- st_as_sf(range95Sofia)
+
+Steffi_sf <- st_as_sf(Steffi)
+range95Steffi_sf <- st_as_sf(range95Steffi)
+
+Thea_sf <- st_as_sf(Thea)
+range95Thea_sf <- st_as_sf(range95Thea)
+
+## test zone
+
+#   tm_shape(Astrid_sf, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("CartoDB.Voyager") +
+#   tm_dots(fill = "#32a5ff") +
+# tm_shape(range95Astrid_sf) + 
+#   tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+#   tm_fill(fill_alpha=.1, fill = "#32a5ff") 
 
 #Brandts
 BrandtsHR<-
   tm_shape(Astrid_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
+  tm_dots(fill = "#32a5ff") +
 tm_shape(range95Astrid_sf) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
   
   tm_shape(Dagny_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
+  tm_dots(fill = "#32a5ff") +
 tm_shape(range95Dagny_sf) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+  
 
   tm_shape(Kaja_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
+  tm_dots(fill= "#32a5ff") +
 tm_shape(range95Kaja_sf) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
 
   tm_shape(Maren_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
+  tm_dots(fill= "#32a5ff") +
 tm_shape(range95Maren_sf) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
   
   tm_shape(Nora_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
+  tm_dots(fill= "#32a5ff") +
 tm_shape(range95Nora_sf) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
   
-  tm_shape(Phoebe, bbox = bound_box) + 
+  tm_shape(Phoebe_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Phoebe) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Phoebe_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
 
-  tm_shape(Sofia, bbox = bound_box) + 
+  tm_shape(Sofia_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Sofia) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Sofia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
   
-  tm_shape(Steffi, bbox = bound_box) + 
+  tm_shape(Steffi_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Steffi) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Steffi_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
   
-  tm_shape(Thea, bbox = bound_box) + 
+  tm_shape(Thea_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Thea) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tm_scale_bar(position = c("top", "right"), width = 200, text.size = 15) 
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Thea_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
 
 
 BrandtsHR
@@ -2838,125 +2860,146 @@ BrandtsHR
 # 5: The shape range95Phoebe is invalid (after reprojection). See sf::st_is_valid 
 # 6: The shape range95Sofia is invalid (after reprojection). See sf::st_is_valid
 
+### MMYS ### 
+
+Amelia_sf <- st_as_sf(Amelia)
+range95Amelia_sf<- st_as_sf(range95Amelia)
+
+Aricia_sf <- st_as_sf(Aricia)
+range95Aricia_sf<- st_as_sf(range95Aricia)
+
+Daisy_sf <- st_as_sf(Daisy)
+range95Daisy_sf<- st_as_sf(range95Daisy)
+
+Ethel_sf <- st_as_sf(Ethel)
+range95Ethel_sf<- st_as_sf(range95Ethel)
+
+Ida_sf <- st_as_sf(Ida)
+range95Ida_sf<- st_as_sf(range95Ida)
+
+Line_sf <- st_as_sf(Line)
+range95Line_sf<- st_as_sf(range95Line)
+
+Louise_sf <- st_as_sf(Louise)
+range95Louise_sf<- st_as_sf(range95Louise)
+
+Marie_sf <- st_as_sf(Marie)
+range95Marie_sf<- st_as_sf(range95Marie)
+
+Ragnhild_sf <- st_as_sf(Ragnhild)
+range95Ragnhild_sf<- st_as_sf(range95Ragnhild)
+
+Reeda_sf <- st_as_sf(Reeda)
+range95Reeda_sf<- st_as_sf(range95Reeda)
+
+Stine_sf <- st_as_sf(Stine)
+range95Stine_sf<- st_as_sf(range95Stine)
+
+Turid_sf <- st_as_sf(Turid)
+range95Turid_sf<- st_as_sf(range95Turid)
+
+
+
 MystacinusHR <- 
-  tm_shape(Amelia, bbox = bound_box) + 
+  tm_shape(Amelia_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Amelia) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Amelia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+  
+  tm_shape(Aricia_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Aricia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+
+  tm_shape(Daisy_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Daisy_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+
+  tm_shape(Ethel_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Ethel_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+  
+  tm_shape(Ida_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Ida_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+  
+  tm_shape(Line_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Line_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+
+  tm_shape(Line_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Line_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+
+  tm_shape(Marie_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Marie_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+
+  tm_shape(Ragnhild_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Ragnhild_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
+
+  tm_shape(Reeda_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Reeda_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
 
   
-  tm_shape(Aricia, bbox = bound_box) + 
+  tm_shape(Stine_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Aricia) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Stine_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
 
   
-  tm_shape(Daisy, bbox = bound_box) + 
+  tm_shape(Turid_sf, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Daisy) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Turid_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") +
 
-  tm_shape(Ethel, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Ethel) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Ida, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Ida) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Line, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Line) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Line, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Line) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Marie, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Marie) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Ragnhild, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Ragnhild) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Reeda, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Reeda) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Stine, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Stine) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-
-  
-  tm_shape(Turid, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Turid) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE)  +
-  tm_scale_bar(position = c("top", "right"), width = 200, text.size = 15) 
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
 
 MystacinusHR 
 # 1: The shape range95Amelia is invalid (after reprojection). See sf::st_is_valid 
@@ -2967,6 +3010,114 @@ MystacinusHR
 # 6: The shape range95Turid is invalid (after reprojection). See sf::st_is_valid 
 
 tmap_arrange(BrandtsHR, MystacinusHR, ncol = 2, nrow = 1)
+
+```
+
+# Different approach to figure 2 
+With assistance from Sikt KI GPT-5.4 
+```{r}
+Mystacinus_points <- rbind(
+  Amelia_sf,
+  Aricia_sf,
+  Daisy_sf,
+  Ethel_sf,
+  Ida_sf,
+  Line_sf,
+  Marie_sf,
+  Ragnhild_sf,
+  Reeda_sf,
+  Stine_sf,
+  Turid_sf
+)
+
+Mystacinus_ranges <- rbind(
+  range95Amelia_sf,
+  range95Aricia_sf,
+  range95Daisy_sf,
+  range95Ethel_sf,
+  range95Ida_sf,
+  range95Line_sf,
+  range95Marie_sf,
+  range95Ragnhild_sf,
+  range95Reeda_sf,
+  range95Stine_sf,
+  range95Turid_sf
+)
+
+MystacinusHR <- 
+  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
+  tm_fill(col = "#011f4b", alpha = 0.1) +
+  tm_shape(Mystacinus_points) +
+  tm_dots(col = "#011f4b", size = 0.3, alpha = 0.8) +
+  tm_basemap("CartoDB.Voyager") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+
+tmap_mode("view")
+MystacinusHR
+
+
+tmap_mode("view")
+
+Brandts_points <- rbind(
+  Astrid_sf,
+  Dagny_sf,
+  Kaja_sf,
+  Maren_sf,
+  Nora_sf,
+  Phoebe_sf,
+  Sofia_sf,
+  Steffi_sf,
+  Thea_sf
+)
+
+Brandts_ranges <- rbind(
+  range95Astrid_sf,
+  range95Dagny_sf,
+  range95Kaja_sf,
+  range95Maren_sf,
+  range95Nora_sf,
+  range95Phoebe_sf,
+  range95Sofia_sf,
+  range95Steffi_sf,
+  range95Thea_sf
+)
+
+BrandtsHR <-
+  tm_shape(Brandts_ranges, bbox = bound_box) +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill_alpha = "#32a5ff") +
+  tm_shape(Brandts_points) +
+  tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
+  tm_basemap("CartoDB.Voyager") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+
+BrandtsHR
+
+## Now combine: 
+
+tmap_mode("view")
+
+CombinedHR <-
+  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
+  tm_fill(col = "#011f4b", alpha = 0.1) +
+  
+  tm_shape(Brandts_ranges) +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+  
+  tm_shape(Mystacinus_points) +
+  tm_dots(col = "#011f4b", size = 0.3, alpha = 0.8) +
+  
+  tm_shape(Brandts_points) +
+  tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
+  
+  tm_basemap("CartoDB.Voyager") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5) +   tm_scalebar(position = c("top", "right"), width = 200, text.size = 15)
+
+CombinedHR
+
 
 ```
 
