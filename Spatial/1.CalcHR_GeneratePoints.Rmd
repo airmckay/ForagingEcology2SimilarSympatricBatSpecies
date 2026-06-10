@@ -3083,18 +3083,138 @@ Brandts_ranges <- rbind(
   range95Thea_sf
 )
 
+
+
+# transform all to same CRS
+Brandts_points <- st_transform(Brandts_points, st_crs(Brandts_ranges))
+Mystacinus_ranges <- st_transform(Mystacinus_ranges, st_crs(Brandts_ranges))
+Mystacinus_points <- st_transform(Mystacinus_points, st_crs(Brandts_ranges))
+
+# clean geometries
+Brandts_ranges <- st_make_valid(Brandts_ranges[!st_is_empty(Brandts_ranges), ])
+Brandts_points <- st_make_valid(Brandts_points[!st_is_empty(Brandts_points), ])
+Mystacinus_ranges <- st_make_valid(Mystacinus_ranges[!st_is_empty(Mystacinus_ranges), ])
+Mystacinus_points <- st_make_valid(Mystacinus_points[!st_is_empty(Mystacinus_points), ])
+
+# shared extent across all layers
+bb1 <- st_bbox(Brandts_ranges)
+bb2 <- st_bbox(Brandts_points)
+bb3 <- st_bbox(Mystacinus_ranges)
+bb4 <- st_bbox(Mystacinus_points)
+
+xmin <- min(bb1["xmin"], bb2["xmin"], bb3["xmin"], bb4["xmin"], na.rm = TRUE)
+xmax <- max(bb1["xmax"], bb2["xmax"], bb3["xmax"], bb4["xmax"], na.rm = TRUE)
+ymin <- min(bb1["ymin"], bb2["ymin"], bb3["ymin"], bb4["ymin"], na.rm = TRUE)
+ymax <- max(bb1["ymax"], bb2["ymax"], bb3["ymax"], bb4["ymax"], na.rm = TRUE)
+
+xpad <- (xmax - xmin) * 0.08
+ypad <- (ymax - ymin) * 0.08
+
+common_bbox <- st_bbox(c(
+  xmin = xmin - xpad,
+  xmax = xmax + xpad,
+  ymin = ymin - ypad,
+  ymax = ymax + ypad
+), crs = st_crs(Brandts_ranges))
+
+# Brandts
 BrandtsHR <-
   tm_shape(Brandts_ranges, bbox = bound_box) +
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill_alpha = "#32a5ff") +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) +
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
   tm_shape(Brandts_points) +
-  tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
+  tm_dots(fill = "#32a5ff", size = 0.3, fill_alpha = 0.8) +
   tm_basemap("CartoDB.Voyager") +
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+  tm_scalebar(position = c("top", "right"), width = 100, text.size = 0.6)
 
 BrandtsHR
 
-## Now combine: 
+# Mystacinus 011f4b
+MystacinusHR <-
+  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) +
+  tm_fill(fill_alpha=.1, fill = "#011f4b") +
+  tm_shape(Mystacinus_points) +
+  tm_dots(fill = "#011f4b", size = 0.3, fill_alpha = 0.8) +
+  tm_basemap("CartoDB.Voyager") +
+  tm_scalebar(position = c("top", "right"), width = 100, text.size = 0.6)
+
+MystacinusHR
+
+# inset map of Norway
+tmap_mode("plot")
+
+
+## Study area inset 
+study_center <- st_as_sf(
+  data.frame(lon = 10.8985915, lat = 60.0587263),
+  coords = c("lon", "lat"),
+  crs = 4326
+)
+
+norway_bbox <- st_bbox(c(
+  xmin = 4.0,
+  xmax = 32.0,
+  ymin = 57.5,
+  ymax = 71.5
+), crs = st_crs(4326))
+
+norway_box_sf <- st_as_sfc(norway_bbox)
+
+norway_inset <-
+  tm_shape(norway_box_sf) +
+  tm_basemap("CartoDB.Voyager") +
+  tm_shape(study_center) +
+  tm_symbols(
+    col = "black",
+    shape = 21,
+    border.col = "black",
+    fill = "white",
+    size = 1.2
+  ) +
+  tm_scalebar(position = c("bottom", "right"), width = 10, text.size = 0.6) 
+
+norway_inset
+
+
+#
+
+# save both at same size
+tmap_save(
+  BrandtsHR,
+  filename = file.path(output_today, "BrandtsHR_map.tiff"),
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 600
+)
+
+tmap_save(
+  MystacinusHR,
+  filename = file.path(output_today, "MystacinusHR_map.tiff"),
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 600
+)
+
+
+tmap_save(
+  norway_inset,
+  filename = file.path(output_today, "NorwayInset.tiff"),
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 600
+)
+
+
+# Map saved to C:\Users\apmc\OneDrive - Norwegian University of Life Sciences\1. Nittedal 2018-2020\Nittedal_Main\Analyses\Outputs\HomeRangeExploration_2026-06-08\MystacinusHR_map.tiff
+# Resolution: 4800 by 7200 pixels
+# Size: 8 by 12 inches (600 dpi)
+
+
+## for supplementary 
 
 tmap_mode("view")
 
@@ -3114,10 +3234,225 @@ CombinedHR <-
   tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
   
   tm_basemap("CartoDB.Voyager") +
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5) +   tm_scalebar(position = c("top", "right"), width = 200, text.size = 15)
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+
+CombinedHR
+
+tmap_save(
+  CombinedHR,
+  filename = file.path(output_today, "CombinedHR.tiff"),
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 600
+)
+
+
+## Now sattelite
+
+CombinedHR <-
+  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
+  tm_fill(col = "#011f4b", alpha = 0.1) +
+  
+  tm_shape(Brandts_ranges) +
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+  
+  tm_shape(Mystacinus_points) +
+  tm_dots(col = "#011f4b", size = 0.3, alpha = 0.8) +
+  
+  tm_shape(Brandts_points) +
+  tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
+  
+  tm_basemap("Esri.WorldImagery") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
 
 CombinedHR
 
 
+```
+
+
+
+## Now more detailed exploration of the individual home ranges 
+## Use sattelite images
+```{r}
+BrandtsHR<-
+  tm_shape(Astrid_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill = "#32a5ff") +
+tm_shape(range95Astrid_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+  
+  tm_shape(Dagny_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill = "#32a5ff") +
+tm_shape(range95Dagny_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+  
+
+  tm_shape(Kaja_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Kaja_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+
+  tm_shape(Maren_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Maren_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+  
+  tm_shape(Nora_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Nora_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+  
+  tm_shape(Phoebe_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Phoebe_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+
+  tm_shape(Sofia_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Sofia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+  
+  tm_shape(Steffi_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Steffi_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+  
+  tm_shape(Thea_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Thea_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
+
+
+BrandtsHR
+
+
+### MMYS ###
+
+
+MystacinusHR <- 
+  tm_shape(Amelia_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Amelia_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+  
+  tm_shape(Aricia_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Aricia_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  tm_shape(Daisy_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Daisy_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  tm_shape(Ethel_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Ethel_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+  
+  tm_shape(Ida_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Ida_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+  
+  tm_shape(Line_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Line_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  tm_shape(Marie_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Marie_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  tm_shape(Ragnhild_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Ragnhild_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  tm_shape(Reeda_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Reeda_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  
+  tm_shape(Stine_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldImagery") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+tm_shape(range95Stine_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  
+  tm_shape(Turid_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
+  tm_shape(range95Turid_sf) + 
+  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "white") +
+
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
+
+  
 ```
 
