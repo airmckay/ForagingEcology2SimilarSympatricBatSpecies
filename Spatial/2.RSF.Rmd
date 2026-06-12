@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 ### Prepare the work space
 # citation()
+#install.packages(c("DHARMa", "lme4", "Matrix", "Rcpp", "RcppEigen"))
 
 library(tidyverse)
 library(dplyr)
@@ -22,14 +23,12 @@ library(ResourceSelection)
 library(RColorBrewer)
 library(cowplot)
 library(colorBlindness)
-library(kableExtra)
 library(lme4)
 library(stats)
 library(DHARMa)
 library(lattice)
 library(broom)
 library(modelsummary)
-library(kableExtra)
 library(gt)
 library(readxl)
 library(xlsx)
@@ -37,6 +36,8 @@ library(corrplot)
 library(vegan)
 library(mapview)
 library(sf)
+library(influence.ME)
+
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -56,6 +57,8 @@ output_today
 dir.create(output_today)
 output_today
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSF_50mRadius_2025-11-21"
+
+
 
 ```
 
@@ -176,83 +179,83 @@ dim(dt1)
 
 ### Define non-forest areas in the dataset 
 # How does this look for used points? 
-dt2dfused <- dt2df %>% filter(used == 1)
-hist(dt2dfused$ttops.n) 
+# dt2dfused <- dt2df %>% filter(used == 1)
+# hist(dt2dfused$ttops.n) 
+# 
+# hist(dt2dfused$D0)
+# 
+# table(dt1df$BatID)
 
-hist(dt2dfused$D0)
 
-table(dt1df$BatID)
-
-
-## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
-openareas <- dt2dfused %>% dplyr::filter(H95 < 5 & D0 < 0.1)
-summary(openareas)
-dim(openareas)
-# 22 obs 
-22/1502
-# 0.014
-0.014 *100
-
-table(openareas$Species)
-  # M.brandtii M.mystacinus 
-  #         15            7 
-
-table(openareas$BatID)
-#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
-#        2        0        0        1        0        2        0 
-#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
-#        0        0        0        1        0        0        5 
-# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
-#        0        1        0        7        2        1        0
-
-ggplot(dt2dfused, aes(x = H95, y = D0)) + 
-  geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
-  facet_wrap(~Species)
-
-## WHat is the proportion of non forest areas for random pointS? 
-random <- dt2df %>% filter(used == 0)
-
-## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
-openareas <- random %>% dplyr::filter(H95 < 5 & D0 < 0.1)
-summary(openareas)
-dim(openareas)
-# 1677 obs 
-1677/15020
-# 11%
-
-table(openareas$Species)
-  # M.brandtii        M.mystacinus 
-  #          1016             661 
-
-table(openareas$BatID)
-#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
-#       29      101       87      173       84      111        8 
-#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
-#       78       36       77      243       32       54       84 
-# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
-#       26       10       27       67      147      203        0 
-
-ggplot(random, aes(x = H95, y = D0)) + 
-  geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
-  facet_wrap(~Species)
+# ## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
+# openareas <- dt2dfused %>% dplyr::filter(H95 < 5 & D0 < 0.1)
+# summary(openareas)
+# dim(openareas)
+# # 22 obs 
+# 22/1502
+# # 0.014
+# 0.014 *100
+# 
+# table(openareas$Species)
+#   # M.brandtii M.mystacinus 
+#   #         15            7 
+# 
+# table(openareas$BatID)
+# #   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+# #        2        0        0        1        0        2        0 
+# #     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+# #        0        0        0        1        0        0        5 
+# # Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+# #        0        1        0        7        2        1        0
+# 
+# ggplot(dt2dfused, aes(x = H95, y = D0)) + 
+#   geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
+#   facet_wrap(~Species)
+# 
+# ## WHat is the proportion of non forest areas for random pointS? 
+# random <- dt2df %>% filter(used == 0)
+# 
+# ## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
+# openareas <- random %>% dplyr::filter(H95 < 5 & D0 < 0.1)
+# summary(openareas)
+# dim(openareas)
+# # 1677 obs 
+# 1677/15020
+# # 11%
+# 
+# table(openareas$Species)
+#   # M.brandtii        M.mystacinus 
+#   #          1016             661 
+# 
+# table(openareas$BatID)
+# #   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+# #       29      101       87      173       84      111        8 
+# #     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+# #       78       36       77      243       32       54       84 
+# # Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+# #       26       10       27       67      147      203        0 
+# 
+# ggplot(random, aes(x = H95, y = D0)) + 
+#   geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
+#   facet_wrap(~Species)
  
 ```
 
 
 ## Correlation/collinearity between LiDAR variables 
 ```{r}
-names(dt1)
-dtc <- dt1 %>% dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height)) 
-
-windows()
-
-corrplot(cor(dtc))
+# names(dt1)
+# dtc <- dt1 %>% dplyr::select(c(
+#   Hmax, Hmean, Hsd, Hcv, Hskewness, 
+#   H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+#   D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+#   gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+#   gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+#   ttops.n, ttops.mean.height, ttops.sd.height)) 
+# 
+# windows()
+# 
+# corrplot(cor(dtc))
 ```
 
 
@@ -264,98 +267,98 @@ corrplot(cor(dtc))
 
 ## Create an ID column so the bat meta data can be reattached later
 
-## Create a unique row id which will become "idvar"
-dt1$idvar <- paste0("ID-", 1:nrow(dt1)) 
-headings <- dt1$idvar
-
-## Now only includeLiDAR variables with IDvar
-names(dt1)
-
-dt2 <- dt1 %>% dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, Hkurt, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height,
-  crown.mean.size, crown.sd.size)) 
-
-rownames(dt2) <- headings
-# Reshape into wide format 
-
-summary(dt2)
-## This is a PCA, more info below: 
-
-mat <- dt2 
+# ## Create a unique row id which will become "idvar"
+# dt1$idvar <- paste0("ID-", 1:nrow(dt1)) 
+# headings <- dt1$idvar
+# 
+# ## Now only includeLiDAR variables with IDvar
+# names(dt1)
+# 
+# dt2 <- dt1 %>% dplyr::select(c(
+#   Hmax, Hmean, Hsd, Hcv, Hskewness, Hkurt, 
+#   H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+#   D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+#   gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+#   gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+#   ttops.n, ttops.mean.height, ttops.sd.height,
+#   crown.mean.size, crown.sd.size)) 
+# 
+# rownames(dt2) <- headings
+# # Reshape into wide format 
+# 
+# summary(dt2)
+# ## This is a PCA, more info below: 
+# 
+# mat <- dt2 
 
 ```
 
 ## PCA
 ```{r}
 
-## PCA 
-trait.pca <- rda(mat) # used and available points together 
-biplot(trait.pca) 
-# simple plot 
-screeplot(trait.pca) 
-# how much of each axis describes the variation in the data 
-# PC1 Explains most of the variation. Big difference between PC2 and PC3. 
-summary(trait.pca)
-pca.summary <- summary(trait.pca)
-## In our case, 'species' are the different LiDAR variables and sites are the different bat locations. 
-trait.loadings <- as.data.frame(pca.summary$species) %>% 
-  mutate(trait = rownames(.))  
-head(trait.loadings)
-meta <- dt1 %>% dplyr::select(c(used, Species, idvar)) 
-# for now, do not include bat.id
-## Build meta data to be reattached in plotting
-rownames(meta) <- meta$idvar
-meta$gen.spe <- meta$idvar
-meta$used <- as.factor(meta$used)
-# Scores for all the different bat locations 
-
-sp.scores <- as.data.frame(pca.summary$sites) %>% 
-  dplyr::mutate(gen.spe = rownames(.)) %>% dplyr::inner_join(meta, by="gen.spe") 
-
-traittable <- trait.loadings  %>% 
-  dplyr::select(trait, PC1, PC2)
-
-#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 19.11.2025
-
-### Compare trait loadings for bat locations with Pearson's correlation of PC1 and PC2, as well as of the LiDAR variables with each other 
-spdf <- dplyr::left_join(sp.scores, dt1, by = "idvar")
-spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, UID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
-#corrplot(cor(dtc))
-cortab <- as.data.frame(cor(spdf1)) 
-#windows()
-corrplot(cor(spdf1),
-         tl.col="black", tl.srt=45,  
-         type="lower", col=brewer.pal(n=5, name="Greys"))
-cortab1 <- cortab[1:2,]
-cortab2 <- t(cortab1) # Table of the values for further comparing 
-# write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
-# 21.11.2025
-
-################################################################################
-##### plotting 
-################################################################################
-
-## PC1 and PC2
-pca.ggplot <- ggplot(data = sp.scores, aes(x = PC1, y = PC2)) +
-  geom_point() +
-  geom_segment(data = trait.loadings, 
-               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + # this is a new geom that allows you to draw segments like the ones for the loadings above
-  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + # this adds text to the labels
-  theme_bw() 
-pca.ggplot
-
-
-## Table of PCA for further informing variable selection 
-traittable <- trait.loadings  %>% 
-  dplyr::select(trait, PC1, PC2)
-# write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 24.11.2025
-
-## Now create a similar table for MBRA and MMYS separately 
+# ## PCA 
+# trait.pca <- rda(mat) # used and available points together 
+# biplot(trait.pca) 
+# # simple plot 
+# screeplot(trait.pca) 
+# # how much of each axis describes the variation in the data 
+# # PC1 Explains most of the variation. Big difference between PC2 and PC3. 
+# summary(trait.pca)
+# pca.summary <- summary(trait.pca)
+# ## In our case, 'species' are the different LiDAR variables and sites are the different bat locations. 
+# trait.loadings <- as.data.frame(pca.summary$species) %>% 
+#   mutate(trait = rownames(.))  
+# head(trait.loadings)
+# meta <- dt1 %>% dplyr::select(c(used, Species, idvar)) 
+# # for now, do not include bat.id
+# ## Build meta data to be reattached in plotting
+# rownames(meta) <- meta$idvar
+# meta$gen.spe <- meta$idvar
+# meta$used <- as.factor(meta$used)
+# # Scores for all the different bat locations 
+# 
+# sp.scores <- as.data.frame(pca.summary$sites) %>% 
+#   dplyr::mutate(gen.spe = rownames(.)) %>% dplyr::inner_join(meta, by="gen.spe") 
+# 
+# traittable <- trait.loadings  %>% 
+#   dplyr::select(trait, PC1, PC2)
+# 
+# #write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 19.11.2025
+# 
+# ### Compare trait loadings for bat locations with Pearson's correlation of PC1 and PC2, as well as of the LiDAR variables with each other 
+# spdf <- dplyr::left_join(sp.scores, dt1, by = "idvar")
+# spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, UID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
+# #corrplot(cor(dtc))
+# cortab <- as.data.frame(cor(spdf1)) 
+# #windows()
+# corrplot(cor(spdf1),
+#          tl.col="black", tl.srt=45,  
+#          type="lower", col=brewer.pal(n=5, name="Greys"))
+# cortab1 <- cortab[1:2,]
+# cortab2 <- t(cortab1) # Table of the values for further comparing 
+# # write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
+# # 21.11.2025
+# 
+# ################################################################################
+# ##### plotting 
+# ################################################################################
+# 
+# ## PC1 and PC2
+# pca.ggplot <- ggplot(data = sp.scores, aes(x = PC1, y = PC2)) +
+#   geom_point() +
+#   geom_segment(data = trait.loadings, 
+#                aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + # this is a new geom that allows you to draw segments like the ones for the loadings above
+#   geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + # this adds text to the labels
+#   theme_bw() 
+# pca.ggplot
+# 
+# 
+# ## Table of PCA for further informing variable selection 
+# traittable <- trait.loadings  %>% 
+#   dplyr::select(trait, PC1, PC2)
+# # write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 24.11.2025
+# 
+# ## Now create a similar table for MBRA and MMYS separately 
 
 
 ```
@@ -380,7 +383,7 @@ traittable <- trait.loadings  %>%
 MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7634 obs of 49 vars
 MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8888 obs of 49 vars
 
-MBRA$BatID <- factor(MBRA$BatID) # 10 levels 
+MBRA$BatID <- factor(MBRA$BatID) # 9 levels 
 table(MBRA$BatID)
 # Astrid  Dagny   Kaja  Maren   Nora Phoebe  Sofia Steffi   Thea 
 #    891    913   1001   1551    539    682    429    429   1111 
@@ -399,26 +402,26 @@ summary(MBRA)
 ########################################################
 ########################  MBRA  ########################
 ########################################################
-
+# install.packages(c("Matrix", "Rcpp", "RcppEigen", "lme4"))
 library(lme4)
-fit1MBRA= glmer(used ~  
-                  gap3.mean.area + 
+fit1MBRA= glmer(used ~
+                  gap3.mean.area +
                   D0 + H95 + Hsd + water.distance +
                   (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-fit2MBRA= glmer(used ~  
-                  gap5.mean.area + 
+              family=binomial(link="logit"),nAGQ = 0)
+fit2MBRA= glmer(used ~
+                  gap5.mean.area +
                   D0 + H95 + Hsd + water.distance +
                   (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-
+              family=binomial(link="logit"),nAGQ = 0)
+# 
 summary(fit2MBRA)
 
 isSingular(fit1MBRA)
-# FALSE
-isSingular(fit2MBRA)
-# FALSE
-AIC(fit1MBRA, fit2MBRA)
+# # FALSE
+# isSingular(fit2MBRA)
+# # FALSE
+# AIC(fit1MBRA, fit2MBRA)
 #          df      AIC
 # fit1MBRA  7 4290.572 # 3 m scale is lower 
 # fit2MBRA  7 4301.640
@@ -431,22 +434,22 @@ AIC(fit1MBRA, fit2MBRA)
 ########################################################
 ########################  MMYS  ########################
 ########################################################
-
-
-fit1MMYS= glmer(used ~  
-                  gap3.mean.area + 
+# 
+# 
+fit1MMYS= glmer(used ~
+                  gap3.mean.area +
                   D0 + H95 + Hsd + water.distance +
                   (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-fit2MMYS= glmer(used ~  
+              family=binomial(link="logit"),nAGQ = 0)
+fit2MMYS= glmer(used ~
                   gap5.mean.area +
                   D0 + H95 + Hsd + water.distance +
                   (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
+              family=binomial(link="logit"),nAGQ = 0)
 AIC(fit1MMYS, fit2MMYS)
 #          df      AIC
-# fit1MMYS  7   5201.882 
-# fit2MMYS  7   5199.381 # 5 m scale is lower 
+# fit1MMYS  7   5201.882
+# fit2MMYS  7   5199.381 # 5 m scale is lower
 
 
 ## (old analysis)
@@ -456,26 +459,30 @@ AIC(fit1MMYS, fit2MMYS)
 ################################################
 # The gap5 model for MBRA throws a singularity warning, and the AIC weights between the model pairs is very little so I will use the 3 m resolution models to continue. 
 
-summary(fit1MBRA)
-
-summary(fit1MMYS)
-
+# summary(fit1MBRA)
+# 
+# summary(fit1MMYS)
+# 
 sjPlot::tab_model(fit1MBRA, fit1MMYS,fit2MBRA, fit2MMYS,
                   dv.labels = c(
                     "Myotis brandtii - 3 m", "Myotis mystacinus - 3 m",
-                    "Myotis brandtii - 5 m", "Myotis mystacinus - 5 m"), transform = NULL, auto.label = FALSE) 
+                    "Myotis brandtii - 5 m", "Myotis mystacinus - 5 m"), transform = NULL, auto.label = FALSE)
+
+# Plot the confidence intervals for MBRA and MMYS at 5 m resolution
+
+
 ```
 
 
 ## Use the VIF function to test for correlation amongst variables 
 ```{r}
-library(car)
+# library(car)
 ### VIF equal to 1 = variables are not correlated.
 ## VIF between 1 and 5 = variables are moderately correlated.
 ## VIF greater than 5 = variables are highly correlated.
 
 
-vif(fit1MBRA)
+# vif(fit1MBRA)
 # gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.728157       2.409865       6.196688       5.262636       1.154840 
 
@@ -483,7 +490,7 @@ vif(fit1MBRA)
 # gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.741990       2.413678       6.131832       5.201883       1.152878 
 
-vif(fit1MMYS)
+# vif(fit1MMYS)
 # gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.464794       2.996740       4.653837       3.828337       1.233227 
 
@@ -505,19 +512,19 @@ vif(fit1MMYS)
 # SpeciesM.mystacinus:Hsd             0.13839    0.06488   2.133   0.0329 *  
    
 # Drop H95 to see how this changes the correlation amongst variables 
-fit3MBRA= glmer(used ~  
-                  gap3.mean.area + 
-                  D0 + Hsd + water.distance +
-                  (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-fit3MMYS= glmer(used ~  
-                  gap3.mean.area + 
-                  D0 + Hsd + water.distance +
-                  (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-
-vif(fit3MBRA)
+# fit3MBRA= glmer(used ~  
+#                   gap3.mean.area + 
+#                   D0 + Hsd + water.distance +
+#                   (1|BatID), data=MBRA,
+#               family=binomial(link="logit"),nAGQ = 0) 
+# fit3MMYS= glmer(used ~  
+#                   gap3.mean.area + 
+#                   D0 + Hsd + water.distance +
+#                   (1|BatID), data=MMYS,
+#               family=binomial(link="logit"),nAGQ = 0) 
+# 
+# 
+# vif(fit3MBRA)
 # gap3.mean.area             D0            Hsd water.distance 
 #       2.500579       2.330923       1.117494       1.135345 
 
@@ -526,7 +533,7 @@ vif(fit3MBRA)
 #       2.513972       2.334639       1.111466       1.135041  
 
 
-vif(fit3MMYS)
+# vif(fit3MMYS)
 # gap3.mean.area             D0            Hsd water.distance 
 #       2.500702       2.590675       1.074616       1.224396 
 
@@ -534,22 +541,22 @@ vif(fit3MMYS)
 # gap3.mean.area             D0            Hsd water.distance 
 #       2.503120       2.605929       1.076558       1.235351 
 
-test <- dt1 %>% select(BatID, Species, UID) %>% distinct() %>% arrange(UID)
-test
+# test <- dt1 %>% select(BatID, Species, UID) %>% distinct() %>% arrange(UID)
+# test
 
 ## Sorted 
-bigfit1 = glmer(used ~  Species + 
-                  gap3.mean.area + 
-                  D0 + Hsd + water.distance +
-                  Species*gap3.mean.area + 
-                  Species*D0 + 
-                  Species*Hsd + 
-                  Species*water.distance +
-                  (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-summary(bigfit1)
-## Now step-wise selection with AIC 
-drop1(bigfit1)
+# bigfit1 = glmer(used ~  Species + 
+#                   gap3.mean.area + 
+#                   D0 + Hsd + water.distance +
+#                   Species*gap3.mean.area + 
+#                   Species*D0 + 
+#                   Species*Hsd + 
+#                   Species*water.distance +
+#                   (1|BatID), data=dt1,
+#               family=binomial(link="logit"),nAGQ = 0)
+# summary(bigfit1)
+# ## Now step-wise selection with AIC 
+# drop1(bigfit1)
 # Model:
 # used ~ Species + gap3.mean.area + D0 + Hsd + water.distance + 
 #     Species * gap3.mean.area + Species * D0 + Species * Hsd + 
@@ -583,8 +590,8 @@ bigfit2 =  glmer(used ~  Species +
                    (1|BatID), data=dt1,
                family=binomial(link="logit"),nAGQ = 0)
 
-
-drop1(bigfit2)
+# 
+# drop1(bigfit2)
 # boundary (singular) fit: see help('isSingular')
 # used ~ Species + gap3.mean.area + D0 + Hsd + water.distance + 
 #     Species * gap3.mean.area + Species * D0 + Species * Hsd + 
@@ -946,6 +953,458 @@ output_today
 
 
 
+## Further troubleshoot the model to test the robustness
+How much does a single individual influence the outcome of the model? 
+
+
+bigfit2 =  glmer(used ~  Species + 
+                   gap3.mean.area + 
+                   D0 + Hsd + water.distance +
+                   Species*gap3.mean.area + 
+                   Species*D0 + 
+                   Species*Hsd + 
+                   (1|BatID), data=dt1,
+               family=binomial(link="logit"),nAGQ = 0)
+
+```{r}
+
+
+# =============================================================================
+# 2. COOK'S DISTANCE AND DFBETAS (influence.ME)
+# =============================================================================
+# This refits the model n times, dropping one individual per iteration.
+# Can be slow for large datasets; set parallel = TRUE if using a cluster.
+
+infl <- influence(bigfit2, group = "BatID")
+cd <- cooks.distance(infl)
+
+cd_df <- data.frame(
+  BatID = rownames(cd),
+  cooks_distance = as.numeric(cd)
+)
+
+cd_df
+
+#       BatID cooks_distance
+# 1    Amelia    0.087254669
+# 2    Aricia    0.466942487
+# 3    Astrid    0.278351495
+# 4     Dagny    0.645118904
+# 5     Daisy    0.302865800
+# 6     Ethel    0.644116758
+# 7       Ida    0.329554532
+# 8      Kaja    0.116871787
+# 9      Line    0.210178012
+# 10   Louise    0.518241172
+# 11    Maren    1.476387292
+# 12    Marie    0.173244284
+# 13     Nora    0.156122941
+# 14   Phoebe    0.179989711
+# 15 Ragnhild    0.121511521
+# 16    Reeda    0.311126351
+# 17    Sofia    0.213415269
+# 18   Steffi    0.151305957
+# 19    Stine    0.532828146
+# 20     Thea    4.550412472
+# 21    Turid    0.007731942
+
+               
+               
+        summary(dt1)
+
+# --- Cook's distance ---
+cook_d <- cooks.distance(infl)
+cook_df <- data.frame(
+  individual_id = rownames(cook_d),
+  cooks_d       = as.numeric(cook_d),
+  species       = dt1 |>
+    distinct(BatID, Species) |>
+    arrange(BatID) |>
+    pull(Species)
+)
+
+cook_df
+
+
+# Threshold: common rule of thumb is 4/n (conservative) or visual inspection
+threshold_cook <- 4 / 21
+
+p_cook <- ggplot(cook_df, aes(x = reorder(individual_id, cooks_d),
+                               y = cooks_d, fill = species)) +
+  geom_col() +
+  geom_hline(yintercept = threshold_cook, linetype = "dashed", colour = "red") +
+  coord_flip() +
+  labs(
+    title = "Cook's distance by individual",
+    subtitle = paste0("Dashed line = 4/n threshold (", round(threshold_cook, 3), ")"),
+    x = NULL, y = "Cook's D"
+  ) +
+  theme_bw()
+
+print(p_cook)
+ggsave("cooks_distance.png", p_cook, width = 7, height = 5, dpi = 300)
+
+
+temp <- dt1 %>% mutate(individual_id = BatID, 
+                       species = Species) 
+# --- DFBETAS ---
+dfb <- dfbetas(infl)
+dfb_df <- as.data.frame(dfb) |>
+  mutate(individual_id = rownames(dfb)) |>
+  pivot_longer(-individual_id, names_to = "coefficient", values_to = "dfbeta") |>
+  left_join(distinct(temp, individual_id, species), by = "individual_id")
+
+# DFBETAS threshold: |DFBETAS| > 2/sqrt(n)
+threshold_dfb <- 2 / sqrt(21)
+
+p_dfb <- ggplot(dfb_df, aes(x = reorder(individual_id, abs(dfbeta)),
+                              y = dfbeta, colour = species)) +
+  geom_point(size = 2) +
+  geom_hline(yintercept =  threshold_dfb, linetype = "dashed", colour = "red") +
+  geom_hline(yintercept = -threshold_dfb, linetype = "dashed", colour = "red") +
+  facet_wrap(~ coefficient, scales = "free_y") +
+  coord_flip() +
+  labs(
+    title = "DFBETAS by individual and coefficient",
+    subtitle = paste0("Dashed lines = ±2/√n threshold (±", round(threshold_dfb, 3), ")"),
+    x = NULL, y = "DFBETAS"
+  ) +
+  theme_bw(base_size = 9)
+
+print(p_dfb)
+ggsave("dfbetas.png", p_dfb, width = 10, height = 7, dpi = 300)
+
+```
+
+
+
+```{r}
+# =============================================================================
+# 3. LEAVE-ONE-OUT (LOO) JACKKNIFE BY INDIVIDUAL
+# =============================================================================
+# Refit model dropping one individual at a time; record fixed-effect estimates.
+
+# bigfit2 =  glmer(used ~  Species + 
+#                    gap3.mean.area + 
+#                    D0 + Hsd + water.distance +
+#                    Species*gap3.mean.area + 
+#                    Species*D0 + 
+#                    Species*Hsd + 
+#                    (1|BatID), data=dt1,
+#                family=binomial(link="logit"),nAGQ = 0)
+
+
+str(temp)
+dat <- temp
+
+individuals <- unique(dat$individual_id)
+
+loo_results <- lapply(individuals, function(id) {
+  dat_sub <- filter(dat, individual_id != id)
+  m_loo <- tryCatch(
+    glmer(
+      used ~ Species + gap3.mean.area + 
+                    D0 + Hsd + water.distance +
+                    Species*gap3.mean.area + 
+                    Species*D0 + 
+                    Species*Hsd + 
+             (1 | individual_id),
+      data   = dat_sub,
+      family = binomial(link = "logit"),
+      control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(m_loo)) return(NULL)
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_individual <- id
+  coef_df$dropped_species    <- dat |>
+    filter(individual_id == id) |>
+    pull(species) |>
+    unique()
+  coef_df
+}) |>
+  bind_rows()
+
+# Full-model estimates for reference line
+full_coefs <- data.frame(t(fixef(bigfit2)))
+full_coefs$dropped_individual <- "FULL MODEL"
+full_coefs$dropped_species    <- NA
+
+# Combine and reshape
+loo_long <- bind_rows(loo_results, full_coefs) |>
+  pivot_longer(
+    cols      = -c(dropped_individual, dropped_species),
+    names_to  = "coefficient",
+    values_to = "estimate"
+  )
+
+# Plot: one panel per coefficient, each point is the LOO estimate
+p_loo <- loo_long |>
+  filter(dropped_individual != "FULL MODEL") |>
+  ggplot(aes(x = reorder(dropped_individual, estimate),
+             y = estimate, colour = dropped_species)) +
+  geom_point(size = 2) +
+  geom_hline(
+    data = filter(loo_long, dropped_individual == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed", colour = "black"
+  ) +
+  facet_wrap(~ coefficient, scales = "free") +
+  coord_flip() +
+  labs(
+    title   = "LOO jackknife: fixed-effect estimates",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped individual", y = "Estimate (log-odds)",
+    colour = "Species"
+  ) +
+  theme_bw(base_size = 9)
+
+print(p_loo)
+ggsave("loo_jackknife.png", p_loo, width = 12, height = 8, dpi = 300)
+
+# Summary table: SD of LOO estimates per coefficient (instability measure)
+loo_stability <- loo_long |>
+  filter(dropped_individual != "FULL MODEL") |>
+  group_by(coefficient) |>
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) |>
+  left_join(
+    pivot_longer(full_coefs[1, ], -c(dropped_individual, dropped_species),
+                 names_to = "coefficient", values_to = "full_estimate"),
+    by = "coefficient"
+  ) 
+
+print(loo_stability)
+write.csv(loo_stability, file.path(output_today, "loo_stability_table.csv"), row.names = FALSE)
+
+```
+
+
+
+```{r}
+# # =============================================================================
+# # 4. EFFORT SENSITIVITY CHECK
+# # =============================================================================
+# # Test whether tracking effort (n_nights, n_positions) correlates with
+# # habitat diversity or RSF coefficients, and whether including it as a
+# # covariate changes species-level conclusions.
+# 
+# # --- Correlation: home range size (proxy: n locations) vs habitat diversity ---
+# # Replace shannon_H with your actual per-individual diversity measure
+# 
+# effort_df <- dat |>
+#   group_by(individual_id, species) |>
+#   summarise(
+#     n_used     = sum(used),
+#     n_nights   = first(n_nights),
+#     # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
+#     shannon_H  = {
+#       props <- table(cut(forest_cover[used == 1], breaks = 5)) / sum(used)
+#       props <- props[props > 0]
+#       -sum(props * log(props))
+#     },
+#     .groups = "drop"
+#   )
+# 
+# p_effort <- ggplot(effort_df,
+#                     aes(x = n_nights, y = shannon_H, colour = species)) +
+#   geom_point(size = 3) +
+#   geom_smooth(method = "lm", se = TRUE) +
+#   labs(
+#     title = "Tracking effort vs habitat diversity by individual",
+#     x     = "Number of nights tracked",
+#     y     = "Shannon H (habitat diversity)"
+#   ) +
+#   theme_bw()
+# 
+# print(p_effort)
+# ggsave("effort_vs_diversity.png", p_effort, width = 6, height = 4, dpi = 300)
+# 
+# # Formal test per species
+# effort_df |>
+#   group_by(species) |>
+#   summarise(
+#     cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
+#     cor_p = cor.test(n_nights, shannon_H)$p.value,
+#     .groups = "drop"
+#   ) |>
+#   print()
+# 
+# # --- Sensitivity model with effort covariate ---
+# m_effort <- glmer(
+#   used ~ forest_cover + edge_density + open_habitat +
+#          species:forest_cover + species:edge_density + species:open_habitat +
+#          n_nights +
+#          (1 | individual_id),
+#   data   = dat,
+#   family = binomial(link = "logit"),
+#   control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+# )
+# 
+# # Compare key coefficients between base and effort-adjusted model
+# coef_compare <- data.frame(
+#   coefficient = names(fixef(m_full)),
+#   full_model  = fixef(m_full),
+#   effort_model = fixef(m_effort)[names(fixef(m_full))]
+# )
+# print(coef_compare)
+# 
+# =============================================================================
+# 5. AMONG-INDIVIDUAL VARIANCE BY SPECIES
+# =============================================================================
+
+
+## !! Tried this but encountered errors with the loop that I couldn't fix. 
+
+
+# Fit separate models per species to compare random-effect (among-individual)
+# variance in habitat use.
+
+species_list <- levels(dat$species)
+
+var_by_species <- lapply(species_list, function(sp) {
+  m_sp <- glmer(
+    used ~  gap3.mean.area + D0 + Hsd + water.distance + (1 | individual_id),
+    data   = filter(dat, species == sp),
+    family = binomial(link = "logit"),
+    control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+  )
+  vc <- as.data.frame(VarCorr(m_sp))
+  data.frame(
+    species          = sp,
+    re_variance      = vc$vcov[vc$grp == "individual_id"],
+    re_sd            = vc$sdcor[vc$grp == "individual_id"]
+  )
+}) |> bind_rows()
+
+
+# 
+print(var_by_species)
+## Random effect variance 
+#        species re_variance     re_sd
+# 1   M.brandtii  0.01044946 0.1022226
+# 2 M.mystacinus  0.02627398 0.1620925
+
+## the random-effect variance appears somewhat larger for M.mystacinus, but both species show relatively low random-effect variability overall.
+
+# Higher RE variance = more among-individual variation in habitat use.
+# If M. mystacinus RE variance is LOW, this supports the species-level
+# strategy interpretation (all individuals behave similarly) rather than
+# individual specialisation.
+  
+  
+  ## Alternative approach
+btemp <- dat %>% dplyr::filter(species == "M.brandtii") %>% droplevels() 
+  
+MBRAfit2 =  glmer(used ~
+                   gap3.mean.area +
+                   D0 + Hsd + water.distance +
+                   (1|BatID), data= btemp,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(MBRAfit2)
+
+# Generalized linear mixed model fit by maximum likelihood (Adaptive Gauss-Hermite Quadrature, nAGQ = 0) ['glmerMod']
+#  Family: binomial  ( logit )
+# Formula: used ~ gap3.mean.area + D0 + Hsd + water.distance + (1 | BatID)
+#    Data: btemp
+# 
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    4344.3    4385.9   -2166.1    4332.3      7540 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.7425 -0.3564 -0.2698 -0.2009  7.5026 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.01044  0.1022  
+# Number of obs: 7546, groups:  BatID, 9
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.36362    0.05696 -41.495  < 2e-16 ***
+# gap3.mean.area -0.62611    0.07141  -8.768  < 2e-16 ***
+# D0             -0.45869    0.07141  -6.423 1.33e-10 ***
+# Hsd             0.25445    0.04609   5.520 3.39e-08 ***
+# water.distance -0.48900    0.04925  -9.930  < 2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. D0     Hsd   
+# gap3.mean.r  0.050                     
+# D0           0.112  0.733              
+# Hsd         -0.158  0.236  0.068       
+# water.dstnc  0.180  0.187 -0.029  0.234
+
+mtemp <- dat %>% dplyr::filter(species == "M.mystacinus") %>% droplevels() 
+  
+MMYSfit2 =  glmer(used ~
+                   gap3.mean.area +
+                   D0 + Hsd + water.distance +
+                   (1|BatID), data= mtemp,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(MMYSfit2)
+# Generalized linear mixed model fit by maximum likelihood (Adaptive Gauss-Hermite Quadrature, nAGQ = 0) ['glmerMod']
+#  Family: binomial  ( logit )
+# Formula: used ~ gap3.mean.area + D0 + Hsd + water.distance + (1 | BatID)
+#    Data: mtemp
+# 
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    5222.2    5264.8   -2605.1    5210.2      8970 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.6429 -0.3573 -0.2834 -0.2012  7.7331 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.02626  0.1621  
+# Number of obs: 8976, groups:  BatID, 12
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.57399    0.06957 -37.000   <2e-16 ***
+# gap3.mean.area -0.18833    0.06983  -2.697   0.0070 ** 
+# D0              0.17088    0.06580   2.597   0.0094 ** 
+# Hsd             0.39581    0.04697   8.428   <2e-16 ***
+# water.distance -0.54126    0.05174 -10.462   <2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. D0     Hsd   
+# gap3.mean.r  0.160                     
+# D0          -0.031  0.730              
+# Hsd         -0.159  0.235  0.122       
+# water.dstnc  0.273  0.043 -0.253  0.126
+
+
+vc <- as.data.frame(VarCorr(MBRAfit2))
+  data.frame(
+    species          = sp,
+    re_variance      = vc$vcov[vc$grp == "individual_id"],
+    re_sd            = vc$sdcor[vc$grp == "individual_id"]
+  ) |> bind_rows()
+
+
+```
+
+
+
+```{r}
+
+```
+
+
 ## Compare home ranges
 
 "A Mann-Whitney U test (sometimes called the Wilcoxon rank-sum test) is used to compare the differences between two independent samples when the sample distributions are not normally distributed and the sample sizes are small (n <30).
@@ -996,3 +1455,4 @@ wilcox.test(mbrahr, mmyshr)
 # alternative hypothesis: true location shift is not equal to 0
 # There is strong evidence that the home range size between the two species is distinct from each other. 
 ```
+

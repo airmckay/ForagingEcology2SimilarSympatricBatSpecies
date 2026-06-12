@@ -154,8 +154,8 @@ levels(M.mystacinus$BatID)
 levels(M.brandtii$BatID)
 
 par(mfrow=c(2,1))
-plot(table(M.mystacinus$BatID), main = "Number of plots Mmys", xaxt = "n")
-plot(table(M.brandtii$BatID), main = "Number of plots Mbra")
+plot(table(M.mystacinus$BatID), main = "Number of points Mmys")
+plot(table(M.brandtii$BatID), main = "Number of points Mbra")
 
 #Fix date/time
 
@@ -694,15 +694,15 @@ range95Kaja <- getverticeshr(kde.outputKaja, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Kaja 90%")
 
-p95 <- tm_shape(Kaja, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Kaja) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Kaja 95%")
+# p95 <- tm_shape(Kaja, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#32a5ff") +
+# tm_shape(range95Kaja) + 
+#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#32a5ff") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Kaja 95%")
 
 # p75
 # p85
@@ -1318,15 +1318,15 @@ range95Aricia <- getverticeshr(kde.outputAricia, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Aricia 90%")
 
-p95 <- tm_shape(Aricia, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Aricia) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Aricia 95%")
+# p95 <- tm_shape(Aricia, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Aricia) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Aricia 95%")
 
 # p75
 # p85
@@ -1394,15 +1394,15 @@ range95Daisy <- getverticeshr(kde.outputDaisy, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Daisy 90%")
 
-p95 <- tm_shape(Daisy, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Daisy) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Daisy 95%")
+# p95 <- tm_shape(Daisy, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Daisy) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Daisy 95%")
 
 # p75
 # p85
@@ -1470,15 +1470,15 @@ range95Ethel <- getverticeshr(kde.outputEthel, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Ethel 90%")
 
-p95 <- tm_shape(Ethel, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Ethel) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Ethel 95%")
+# p95 <- tm_shape(Ethel, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Ethel) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Ethel 95%")
 
 # p75
 # p85
@@ -1546,15 +1546,15 @@ range95Ida <- getverticeshr(kde.outputIda, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Ida 90%")
 
-p95 <- tm_shape(Ida, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Ida) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Ida 95%")
+# p95 <- tm_shape(Ida, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Ida) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Ida 95%")
 
 # p75
 # p85
@@ -1622,15 +1622,15 @@ range95Line <- getverticeshr(kde.outputLine, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Line 90%")
 
-p95 <- tm_shape(Line, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Line) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Line 95%")
+# p95 <- tm_shape(Line, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Line) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Line 95%")
 
 # p75
 # p85
@@ -1698,15 +1698,15 @@ range95Louise <- getverticeshr(kde.outputLouise, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Louise 90%")
 
-p95 <- tm_shape(Louise, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Louise) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Louise 95%")
+# p95 <- tm_shape(Louise, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Louise) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Louise 95%")
 
 # p75
 # p85
@@ -1774,15 +1774,15 @@ range95Marie <- getverticeshr(kde.outputMarie, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Marie 90%")
 
-p95 <- tm_shape(Marie, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Marie) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Marie 95%")
+# p95 <- tm_shape(Marie, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Marie) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Marie 95%")
 
 # p75
 # p85
@@ -1850,15 +1850,15 @@ range95Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Ragnhild 90%")
 
-p95 <- tm_shape(Ragnhild, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Ragnhild) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Ragnhild 95%")
+# p95 <- tm_shape(Ragnhild, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Ragnhild) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Ragnhild 95%")
 
 # p75
 # p85
@@ -1925,16 +1925,16 @@ range95Reeda <- getverticeshr(kde.outputReeda, percent = 95)
 #   tm_fill(alpha=.1, col = "#011f4b") +
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Reeda 90%")
-
-p95 <- tm_shape(Reeda, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Reeda) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Reeda 95%")
+# 
+# p95 <- tm_shape(Reeda, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Reeda) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Reeda 95%")
 
 # p75
 # p85
@@ -2002,15 +2002,15 @@ range95Stine <- getverticeshr(kde.outputStine, percent = 95)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Stine 90%")
 
-p95 <- tm_shape(Stine, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Stine) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Stine 95%")
+# p95 <- tm_shape(Stine, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Stine) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Stine 95%")
 
 # p75
 # p85
@@ -2080,15 +2080,15 @@ areaPolygon(range95Turid)
 #   tmap_options(check.and.fix = TRUE) + 
 #   tm_layout(title = "Turid 90%")
 
-p95 <- tm_shape(Turid, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Turid) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Turid 95%")
+# p95 <- tm_shape(Turid, bbox = bound_box) + 
+#   tmap_mode('view') +
+#   tm_basemap("Esri.WorldTopoMap") +
+#   tm_dots(col = "#011f4b") +
+# tm_shape(range95Turid) + 
+#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+#   tm_fill(alpha=.1, col = "#011f4b") +
+#   tmap_options(check.and.fix = TRUE) + 
+#   tm_layout(title = "Turid 95%")
 
 # p75
 # p85
@@ -2105,398 +2105,398 @@ tm_shape(range95Turid) +
 ## Assign random poins based on the 95% kernel densities 
 
 ```{r}
-Bats$BatID <- as.factor(Bats$BatID)
-
-checkpoitns <- as.data.frame(summary(Bats$BatID))
-# List of the number of points for each bat used to calculate the kernels 
-
-## Brandts
-random.points.Astrid <- spsample(range95Astrid, 81*10, "random")
-mapview(random.points.Astrid)
-
-random.points.Dagny <- spsample(range95Dagny, 83*10, "random")
-mapview(random.points.Dagny)
-
-random.points.Kaja <- spsample(range95Kaja, 91*10, "random")
-mapview(random.points.Kaja)
-
-random.points.Maren <- spsample(range95Maren, 141*10, "random")
-mapview(random.points.Maren)
-
-random.points.Nora <- spsample(range95Nora, 49*10, "random")
-mapview(random.points.Nora)
-
-random.points.Phoebe <- spsample(range95Phoebe, 62*10, "random")
-mapview(random.points.Phoebe)
-
-random.points.Sofia <- spsample(range95Sofia, 39*10, "random")
-mapview(random.points.Sofia)
-
-random.points.Steffi <- spsample(range95Steffi, 39*10, "random")
-mapview(random.points.Steffi)
-
-random.points.Thea <- spsample(range95Thea, 101*10, "random")
-mapview(random.points.Thea)
-
-
-## Mystacinus 
-random.points.Amelia <- spsample(range95Amelia, 16*10, "random")
-mapview(random.points.Amelia)
-
-random.points.Aricia <- spsample(range95Aricia, 90*10, "random")
-mapview(random.points.Aricia)
-
-random.points.Daisy <- spsample(range95Daisy, 134*10, "random")
-mapview(random.points.Daisy)
-
-random.points.Ethel <- spsample(range95Ethel, 117*10, "random")
-mapview(random.points.Ethel)
-
-random.points.Ida <- spsample(range95Ida, 119*10, "random")
-mapview(random.points.Ida)
-
-random.points.Line <- spsample(range95Line, 55*10, "random")
-mapview(random.points.Line)
-
-random.points.Louise <- spsample(range95Louise, 64*10, "random")
-mapview(random.points.Louise)
-
-random.points.Marie <- spsample(range95Marie, 31*10, "random")
-mapview(random.points.Marie)
-
-random.points.Ragnhild <- spsample(range95Ragnhild, 28*10, "random")
-mapview(random.points.Ragnhild)
-
-random.points.Reeda <- spsample(range95Reeda, 70*10, "random")
-mapview(random.points.Reeda)
-
-random.points.Stine <- spsample(range95Stine, 84*10, "random")
-mapview(random.points.Stine)
-
-random.points.Turid <- spsample(range95Turid, 8*10, "random")
-mapview(random.points.Turid)
-
-### Create available datasets
-
-### M.brandtii 
-avail.Astrid.df <- data.frame(
-  used = rep(0, length(random.points.Astrid)),
-  Species = rep("M.brandtii", length(Astrid)),
-  BatID = rep("Astrid", length(Astrid)), 
-  coords = random.points.Astrid@coords) 
-
-avail.Dagny.df <- data.frame(
-  used = rep(0, length(random.points.Dagny)),
-  Species = rep("M.brandtii", length(Dagny)),
-  BatID = rep("Dagny", length(Dagny)), 
-  coords = random.points.Dagny@coords)
-
-avail.Kaja.df <- data.frame(
-  used = rep(0, length(random.points.Kaja)),
-  Species = rep("M.brandtii", length(Kaja)),
-  BatID = rep("Kaja", length(Kaja)), 
-  coords = random.points.Kaja@coords)
-
-avail.Maren.df <- data.frame(
-  used = rep(0, length(random.points.Maren)),
-  Species = rep("M.brandtii", length(Maren)),
-  BatID = rep("Maren", length(Maren)), 
-  coords = random.points.Maren@coords)
-
-avail.Nora.df <- data.frame(
-  used = rep(0, length(random.points.Nora)),
-  Species = rep("M.brandtii", length(Nora)),
-  BatID = rep("Nora", length(Nora)), 
-  coords = random.points.Nora@coords)
-
-avail.Phoebe.df <- data.frame(
-  used = rep(0, length(random.points.Phoebe)),
-  Species = rep("M.brandtii", length(Phoebe)),
-  BatID = rep("Phoebe", length(Phoebe)), 
-  coords = random.points.Phoebe@coords)
-
-avail.Sofia.df <- data.frame(
-  used = rep(0, length(random.points.Sofia)),
-  Species = rep("M.brandtii", length(Sofia)),
-  BatID = rep("Sofia", length(Sofia)), 
-  coords = random.points.Sofia@coords)
-
-avail.Steffi.df <- data.frame(
-  used = rep(0, length(random.points.Steffi)),
-  Species = rep("M.brandtii", length(Steffi)),
-  BatID = rep("Steffi", length(Steffi)), 
-  coords = random.points.Steffi@coords)
-
-avail.Thea.df <- data.frame(
-  used = rep(0, length(random.points.Thea)),
-  Species = rep("M.brandtii", length(Thea)),
-  BatID = rep("Thea", length(Thea)), 
-  coords = random.points.Thea@coords)
-
-### MMYS
-
-avail.Amelia.df <- data.frame(
-  used = rep(0, length(random.points.Amelia)),
-  Species = rep("M.mystacinus", length(Amelia)),
-  BatID = rep("Amelia", length(Amelia)), 
-  coords = random.points.Amelia@coords)
-
-avail.Aricia.df <- data.frame(
-  used = rep(0, length(random.points.Aricia)),
-  Species = rep("M.mystacinus", length(Aricia)),
-  BatID = rep("Aricia", length(Aricia)), 
-  coords = random.points.Aricia@coords)
-
-avail.Daisy.df <- data.frame(
-  used = rep(0, length(random.points.Daisy)),
-  Species = rep("M.mystacinus", length(Daisy)),
-  BatID = rep("Daisy", length(Daisy)), 
-  coords = random.points.Daisy@coords)
-
-avail.Ethel.df <- data.frame(
-  used = rep(0, length(random.points.Ethel)),
-  Species = rep("M.mystacinus", length(Ethel)),
-  BatID = rep("Ethel", length(Ethel)), 
-  coords = random.points.Ethel@coords)
-
-avail.Ida.df <- data.frame(
-  used = rep(0, length(random.points.Ida)),
-  Species = rep("M.mystacinus", length(Ida)),
-  BatID = rep("Ida", length(Ida)), 
-  coords = random.points.Ida@coords)
-
-avail.Line.df <- data.frame(
-  used = rep(0, length(random.points.Line)),
-  Species = rep("M.mystacinus", length(Line)),
-  BatID = rep("Line", length(Line)), 
-  coords = random.points.Line@coords)
-
-avail.Louise.df <- data.frame(
-  used = rep(0, length(random.points.Louise)),
-  Species = rep("M.mystacinus", length(Louise)),
-  BatID = rep("Louise", length(Louise)), 
-  coords = random.points.Louise@coords)
-
-avail.Marie.df <- data.frame(
-  used = rep(0, length(random.points.Marie)),
-  Species = rep("M.mystacinus", length(Marie)),
-  BatID = rep("Marie", length(Marie)), 
-  coords = random.points.Marie@coords)
-
-avail.Ragnhild.df <- data.frame(
-  used = rep(0, length(random.points.Ragnhild)),
-  Species = rep("M.mystacinus", length(Ragnhild)),
-  BatID = rep("Ragnhild", length(Ragnhild)), 
-  coords = random.points.Ragnhild@coords)
-
-avail.Reeda.df <- data.frame(
-  used = rep(0, length(random.points.Reeda)),
-  Species = rep("M.mystacinus", length(Reeda)),
-  BatID = rep("Reeda", length(Reeda)), 
-  coords = random.points.Reeda@coords)
-
-avail.Stine.df <- data.frame(
-  used = rep(0, length(random.points.Stine)),
-  Species = rep("M.mystacinus", length(Stine)),
-  BatID = rep("Stine", length(Stine)), 
-  coords = random.points.Stine@coords)
-
-avail.Turid.df <- data.frame(
-  used = rep(0, length(random.points.Turid)),
-  Species = rep("M.mystacinus", length(Turid)),
-  BatID = rep("Turid", length(Turid)), 
-  coords = random.points.Turid@coords)
-
-###
-#Combine used data for all bats
-Bats.used <- rbind(
-  Astrid, # brandts 
-  Dagny,
-  Kaja,
-  Maren,
-  Nora,
-  Phoebe,
-  Sofia,
-  Steffi,
-  Thea,
-  Turid,
-  Amelia, 
-  Aricia,  
-  Daisy, 
-  Ethel, 
-  Ida, 
-  Line, 
-  Louise, 
-  Marie, 
-  Ragnhild, 
-  Reeda, 
-  Stine)
-head(Bats.used)
-summary(Bats.used)
-dim(Bats.used)
-table(Bats.used$BatID)
-
-  # Astrid    Dagny     Kaja    Maren     Nora   Phoebe    Sofia   Steffi     Thea    Turid   Amelia 
-  #     81       83       91      141       49       62       39       39      101        8       16 
-  # Aricia    Daisy    Ethel      Ida     Line   Louise    Marie Ragnhild    Reeda    Stine 
-  #     90      134      117      119       55       64       31       28       70       84 
-
-#Combine available data for all Mbra individuals
-Bats.avail <- rbind(
-  avail.Astrid.df, # brandts 
-  avail.Dagny.df,
-  avail.Kaja.df,
-  avail.Maren.df,
-  avail.Nora.df,
-  avail.Phoebe.df,
-  avail.Sofia.df,
-  avail.Steffi.df,
-  avail.Thea.df,
-  avail.Turid.df, 
-  avail.Amelia.df, # mystacinus 
-  avail.Aricia.df,  
-  avail.Daisy.df, 
-  avail.Ethel.df, 
-  avail.Ida.df, 
-  avail.Line.df, 
-  avail.Louise.df, 
-  avail.Marie.df, 
-  avail.Ragnhild.df, 
-  avail.Reeda.df, 
-  avail.Stine.df)
-
-head(Bats.avail)
-#   used    Species BatID coords.x coords.y
-# 1    0 M.brandtii  Thea 604263.7  6658850
-# 2    0 M.brandtii  Thea 607650.4  6659768
-# 3    0 M.brandtii  Thea 604509.3  6658959
-# 4    0 M.brandtii  Thea 608160.9  6659012
-# 5    0 M.brandtii  Thea 604377.8  6660165
-# 6    0 M.brandtii  Thea 604798.2  6658901
-
-test <- Bats.avail %>% mutate(BatID = factor(BatID), 
-                             Species = factor(Species)) 
-summary(Bats45$Species)
-#   M.brandtii M.mystacinus
-#         686           816 
-summary(test$Species)
-  # M.brandtii M.mystacinus 
-  #       6860         8160  ## Good! 
-
-test <- test %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
- print(test)
-#  1 Astrid   M. brandtii  
-#  2 Dagny    M. brandtii  
-#  3 Kaja     M. brandtii  
-#  4 Maren    M. brandtii  
-#  5 Nora     M. brandtii  
-#  6 Phoebe   M. brandtii  
-#  7 Steffi   M. brandtii  
-#  8 Thea     M. brandtii  
-#  9 Sofia    M. brandtii  
-# 10 Amelia   M. mystacinus
-# 11 Aricia   M. mystacinus
-# 12 Daisy    M. mystacinus
-# 13 Ethel    M. mystacinus
-# 14 Ida      M. mystacinus
-# 15 Line     M. mystacinus
-# 16 Louise   M. mystacinus
-# 17 Marie    M. mystacinus
-# 18 Ragnhild M. mystacinus
-# 19 Reeda    M. mystacinus
-# 20 Stine    M. mystacinus
-# 21 Turid    M. mystacinus
-
-# test <- Bats %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
-# print(test, n = 21)
-# 1 Astrid   M. brandtii  
-#  2 Dagny    M. brandtii  
-#  3 Kaja     M. brandtii  
-#  4 Maren    M. brandtii  
-#  5 Nora     M. brandtii  
-#  6 Phoebe   M. brandtii  
-#  7 Steffi   M. brandtii  
-#  8 Thea     M. brandtii  
-#  9 Sofia    M. brandtii  
-# 10 Amelia   M. mystacinus
-# 11 Aricia   M. mystacinus
-# 12 Daisy    M. mystacinus
-# 13 Ethel    M. mystacinus
-# 14 Ida      M. mystacinus
-# 15 Line     M. mystacinus
-# 16 Louise   M. mystacinus
-# 17 Marie    M. mystacinus
-# 18 Ragnhild M. mystacinus
-# 19 Reeda    M. mystacinus
-# 20 Stine    M. mystacinus
-# 21 Turid    M. mystacinus
-
-Bats.avail.df <- Bats.avail %>% 
-  rename(Easting = coords.x, Northing = coords.y) 
-head(Bats.avail.df)
-#   used    Species BatID  Easting Northing
-# 1    0 M.brandtii  Thea 604263.7  6658850
-# 2    0 M.brandtii  Thea 607650.4  6659768
-# 3    0 M.brandtii  Thea 604509.3  6658959
-# 4    0 M.brandtii  Thea 608160.9  6659012
-# 5    0 M.brandtii  Thea 604377.8  6660165
-# 6    0 M.brandtii  Thea 604798.2  6658901
-names(Bats.avail.df)
-#"used"     "Species"  "BatID"    "Easting"  "Northing"
-dim(Bats.avail.df)
-#15020 5
-
-Bats.used.df <- Bats.used@data
-Bats.used.df$used <- 1
-Bats.used.df$BatID <- as.character(Bats.used.df$BatID)
-head(Bats.used.df)
-names(Bats.used.df)
-#"BatID"    "Easting"  "Northing" "used"  
-dim(Bats.used.df)
-# 1502        4
-
-# 1502     + 15020 = 16522
-
-#Combine Used and Avilable data for all Mbra individuals
-rsf.data <- full_join(Bats.used.df, Bats.avail.df)
-dim(rsf.data)
-#16522     5 # good! 
-
-rsf.data$BatID <- as.factor(rsf.data$BatID)
-summary(rsf.data$BatID)
-  # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise    Maren 
-  #    176      990      891      913     1474     1287     1309     1001      605      704     1551 
-  #  Marie     Nora   Phoebe Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
-  #    341      539      682      308      770      429      429      924     1111       88 
-
-## Some NAs introduced in the species column that should be fixed.
-batmap <- Bats.avail %>% select(BatID, Species) %>% distinct()
-rsf.data1 <- rsf.data %>% select(-Species)
-rsf.data2 <- left_join(rsf.data1, batmap)
-rsf.data2$UTM <- "UTM32"
-
-## export as a simple dataframe
-#write.csv(rsf.data2, file = file.path(output_today, "used_available_pts_combined95KE.csv")) 
-
-
-## Make into a spatial object that can also be exported 
-coords <- coordinates(rsf.data2)<-rsf.data2[,c("Easting","Northing")]
-#assigning coordinates 
-
-proj4string(rsf.data2)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#Define the projection 
-crs(rsf.data2)
-
-rsf.data2<-rsf.data2[!is.na(rsf.data2$Easting) | !is.na(rsf.data2$Northing),]
-#Remove NA values  - There were none to remove 
-
-## Visualize to check if this worked 
-srsf.data2 <- st_as_sf(rsf.data2, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
-mapview(srsf.data2) # This works! 
-output_today
-
-## Exort as a geopackage
-#st_write(srsf.data2, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/bats_rsf_pts.gpkg", driver = "GPKG")
+# Bats$BatID <- as.factor(Bats$BatID)
+# 
+# checkpoitns <- as.data.frame(summary(Bats$BatID))
+# # List of the number of points for each bat used to calculate the kernels 
+# 
+# ## Brandts
+# random.points.Astrid <- spsample(range95Astrid, 81*10, "random")
+# mapview(random.points.Astrid)
+# 
+# random.points.Dagny <- spsample(range95Dagny, 83*10, "random")
+# mapview(random.points.Dagny)
+# 
+# random.points.Kaja <- spsample(range95Kaja, 91*10, "random")
+# mapview(random.points.Kaja)
+# 
+# random.points.Maren <- spsample(range95Maren, 141*10, "random")
+# mapview(random.points.Maren)
+# 
+# random.points.Nora <- spsample(range95Nora, 49*10, "random")
+# mapview(random.points.Nora)
+# 
+# random.points.Phoebe <- spsample(range95Phoebe, 62*10, "random")
+# mapview(random.points.Phoebe)
+# 
+# random.points.Sofia <- spsample(range95Sofia, 39*10, "random")
+# mapview(random.points.Sofia)
+# 
+# random.points.Steffi <- spsample(range95Steffi, 39*10, "random")
+# mapview(random.points.Steffi)
+# 
+# random.points.Thea <- spsample(range95Thea, 101*10, "random")
+# mapview(random.points.Thea)
+# 
+# 
+# ## Mystacinus 
+# random.points.Amelia <- spsample(range95Amelia, 16*10, "random")
+# mapview(random.points.Amelia)
+# 
+# random.points.Aricia <- spsample(range95Aricia, 90*10, "random")
+# mapview(random.points.Aricia)
+# 
+# random.points.Daisy <- spsample(range95Daisy, 134*10, "random")
+# mapview(random.points.Daisy)
+# 
+# random.points.Ethel <- spsample(range95Ethel, 117*10, "random")
+# mapview(random.points.Ethel)
+# 
+# random.points.Ida <- spsample(range95Ida, 119*10, "random")
+# mapview(random.points.Ida)
+# 
+# random.points.Line <- spsample(range95Line, 55*10, "random")
+# mapview(random.points.Line)
+# 
+# random.points.Louise <- spsample(range95Louise, 64*10, "random")
+# mapview(random.points.Louise)
+# 
+# random.points.Marie <- spsample(range95Marie, 31*10, "random")
+# mapview(random.points.Marie)
+# 
+# random.points.Ragnhild <- spsample(range95Ragnhild, 28*10, "random")
+# mapview(random.points.Ragnhild)
+# 
+# random.points.Reeda <- spsample(range95Reeda, 70*10, "random")
+# mapview(random.points.Reeda)
+# 
+# random.points.Stine <- spsample(range95Stine, 84*10, "random")
+# mapview(random.points.Stine)
+# 
+# random.points.Turid <- spsample(range95Turid, 8*10, "random")
+# mapview(random.points.Turid)
+# 
+# ### Create available datasets
+# 
+# ### M.brandtii 
+# avail.Astrid.df <- data.frame(
+#   used = rep(0, length(random.points.Astrid)),
+#   Species = rep("M.brandtii", length(Astrid)),
+#   BatID = rep("Astrid", length(Astrid)), 
+#   coords = random.points.Astrid@coords) 
+# 
+# avail.Dagny.df <- data.frame(
+#   used = rep(0, length(random.points.Dagny)),
+#   Species = rep("M.brandtii", length(Dagny)),
+#   BatID = rep("Dagny", length(Dagny)), 
+#   coords = random.points.Dagny@coords)
+# 
+# avail.Kaja.df <- data.frame(
+#   used = rep(0, length(random.points.Kaja)),
+#   Species = rep("M.brandtii", length(Kaja)),
+#   BatID = rep("Kaja", length(Kaja)), 
+#   coords = random.points.Kaja@coords)
+# 
+# avail.Maren.df <- data.frame(
+#   used = rep(0, length(random.points.Maren)),
+#   Species = rep("M.brandtii", length(Maren)),
+#   BatID = rep("Maren", length(Maren)), 
+#   coords = random.points.Maren@coords)
+# 
+# avail.Nora.df <- data.frame(
+#   used = rep(0, length(random.points.Nora)),
+#   Species = rep("M.brandtii", length(Nora)),
+#   BatID = rep("Nora", length(Nora)), 
+#   coords = random.points.Nora@coords)
+# 
+# avail.Phoebe.df <- data.frame(
+#   used = rep(0, length(random.points.Phoebe)),
+#   Species = rep("M.brandtii", length(Phoebe)),
+#   BatID = rep("Phoebe", length(Phoebe)), 
+#   coords = random.points.Phoebe@coords)
+# 
+# avail.Sofia.df <- data.frame(
+#   used = rep(0, length(random.points.Sofia)),
+#   Species = rep("M.brandtii", length(Sofia)),
+#   BatID = rep("Sofia", length(Sofia)), 
+#   coords = random.points.Sofia@coords)
+# 
+# avail.Steffi.df <- data.frame(
+#   used = rep(0, length(random.points.Steffi)),
+#   Species = rep("M.brandtii", length(Steffi)),
+#   BatID = rep("Steffi", length(Steffi)), 
+#   coords = random.points.Steffi@coords)
+# 
+# avail.Thea.df <- data.frame(
+#   used = rep(0, length(random.points.Thea)),
+#   Species = rep("M.brandtii", length(Thea)),
+#   BatID = rep("Thea", length(Thea)), 
+#   coords = random.points.Thea@coords)
+# 
+# ### MMYS
+# 
+# avail.Amelia.df <- data.frame(
+#   used = rep(0, length(random.points.Amelia)),
+#   Species = rep("M.mystacinus", length(Amelia)),
+#   BatID = rep("Amelia", length(Amelia)), 
+#   coords = random.points.Amelia@coords)
+# 
+# avail.Aricia.df <- data.frame(
+#   used = rep(0, length(random.points.Aricia)),
+#   Species = rep("M.mystacinus", length(Aricia)),
+#   BatID = rep("Aricia", length(Aricia)), 
+#   coords = random.points.Aricia@coords)
+# 
+# avail.Daisy.df <- data.frame(
+#   used = rep(0, length(random.points.Daisy)),
+#   Species = rep("M.mystacinus", length(Daisy)),
+#   BatID = rep("Daisy", length(Daisy)), 
+#   coords = random.points.Daisy@coords)
+# 
+# avail.Ethel.df <- data.frame(
+#   used = rep(0, length(random.points.Ethel)),
+#   Species = rep("M.mystacinus", length(Ethel)),
+#   BatID = rep("Ethel", length(Ethel)), 
+#   coords = random.points.Ethel@coords)
+# 
+# avail.Ida.df <- data.frame(
+#   used = rep(0, length(random.points.Ida)),
+#   Species = rep("M.mystacinus", length(Ida)),
+#   BatID = rep("Ida", length(Ida)), 
+#   coords = random.points.Ida@coords)
+# 
+# avail.Line.df <- data.frame(
+#   used = rep(0, length(random.points.Line)),
+#   Species = rep("M.mystacinus", length(Line)),
+#   BatID = rep("Line", length(Line)), 
+#   coords = random.points.Line@coords)
+# 
+# avail.Louise.df <- data.frame(
+#   used = rep(0, length(random.points.Louise)),
+#   Species = rep("M.mystacinus", length(Louise)),
+#   BatID = rep("Louise", length(Louise)), 
+#   coords = random.points.Louise@coords)
+# 
+# avail.Marie.df <- data.frame(
+#   used = rep(0, length(random.points.Marie)),
+#   Species = rep("M.mystacinus", length(Marie)),
+#   BatID = rep("Marie", length(Marie)), 
+#   coords = random.points.Marie@coords)
+# 
+# avail.Ragnhild.df <- data.frame(
+#   used = rep(0, length(random.points.Ragnhild)),
+#   Species = rep("M.mystacinus", length(Ragnhild)),
+#   BatID = rep("Ragnhild", length(Ragnhild)), 
+#   coords = random.points.Ragnhild@coords)
+# 
+# avail.Reeda.df <- data.frame(
+#   used = rep(0, length(random.points.Reeda)),
+#   Species = rep("M.mystacinus", length(Reeda)),
+#   BatID = rep("Reeda", length(Reeda)), 
+#   coords = random.points.Reeda@coords)
+# 
+# avail.Stine.df <- data.frame(
+#   used = rep(0, length(random.points.Stine)),
+#   Species = rep("M.mystacinus", length(Stine)),
+#   BatID = rep("Stine", length(Stine)), 
+#   coords = random.points.Stine@coords)
+# 
+# avail.Turid.df <- data.frame(
+#   used = rep(0, length(random.points.Turid)),
+#   Species = rep("M.mystacinus", length(Turid)),
+#   BatID = rep("Turid", length(Turid)), 
+#   coords = random.points.Turid@coords)
+# 
+# ###
+# #Combine used data for all bats
+# Bats.used <- rbind(
+#   Astrid, # brandts 
+#   Dagny,
+#   Kaja,
+#   Maren,
+#   Nora,
+#   Phoebe,
+#   Sofia,
+#   Steffi,
+#   Thea,
+#   Turid,
+#   Amelia, 
+#   Aricia,  
+#   Daisy, 
+#   Ethel, 
+#   Ida, 
+#   Line, 
+#   Louise, 
+#   Marie, 
+#   Ragnhild, 
+#   Reeda, 
+#   Stine)
+# head(Bats.used)
+# summary(Bats.used)
+# dim(Bats.used)
+# table(Bats.used$BatID)
+# 
+#   # Astrid    Dagny     Kaja    Maren     Nora   Phoebe    Sofia   Steffi     Thea    Turid   Amelia 
+#   #     81       83       91      141       49       62       39       39      101        8       16 
+#   # Aricia    Daisy    Ethel      Ida     Line   Louise    Marie Ragnhild    Reeda    Stine 
+#   #     90      134      117      119       55       64       31       28       70       84 
+# 
+# #Combine available data for all Mbra individuals
+# Bats.avail <- rbind(
+#   avail.Astrid.df, # brandts 
+#   avail.Dagny.df,
+#   avail.Kaja.df,
+#   avail.Maren.df,
+#   avail.Nora.df,
+#   avail.Phoebe.df,
+#   avail.Sofia.df,
+#   avail.Steffi.df,
+#   avail.Thea.df,
+#   avail.Turid.df, 
+#   avail.Amelia.df, # mystacinus 
+#   avail.Aricia.df,  
+#   avail.Daisy.df, 
+#   avail.Ethel.df, 
+#   avail.Ida.df, 
+#   avail.Line.df, 
+#   avail.Louise.df, 
+#   avail.Marie.df, 
+#   avail.Ragnhild.df, 
+#   avail.Reeda.df, 
+#   avail.Stine.df)
+# 
+# head(Bats.avail)
+# #   used    Species BatID coords.x coords.y
+# # 1    0 M.brandtii  Thea 604263.7  6658850
+# # 2    0 M.brandtii  Thea 607650.4  6659768
+# # 3    0 M.brandtii  Thea 604509.3  6658959
+# # 4    0 M.brandtii  Thea 608160.9  6659012
+# # 5    0 M.brandtii  Thea 604377.8  6660165
+# # 6    0 M.brandtii  Thea 604798.2  6658901
+# 
+# test <- Bats.avail %>% mutate(BatID = factor(BatID), 
+#                              Species = factor(Species)) 
+# summary(Bats45$Species)
+# #   M.brandtii M.mystacinus
+# #         686           816 
+# summary(test$Species)
+#   # M.brandtii M.mystacinus 
+#   #       6860         8160  ## Good! 
+# 
+# test <- test %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
+#  print(test)
+# #  1 Astrid   M. brandtii  
+# #  2 Dagny    M. brandtii  
+# #  3 Kaja     M. brandtii  
+# #  4 Maren    M. brandtii  
+# #  5 Nora     M. brandtii  
+# #  6 Phoebe   M. brandtii  
+# #  7 Steffi   M. brandtii  
+# #  8 Thea     M. brandtii  
+# #  9 Sofia    M. brandtii  
+# # 10 Amelia   M. mystacinus
+# # 11 Aricia   M. mystacinus
+# # 12 Daisy    M. mystacinus
+# # 13 Ethel    M. mystacinus
+# # 14 Ida      M. mystacinus
+# # 15 Line     M. mystacinus
+# # 16 Louise   M. mystacinus
+# # 17 Marie    M. mystacinus
+# # 18 Ragnhild M. mystacinus
+# # 19 Reeda    M. mystacinus
+# # 20 Stine    M. mystacinus
+# # 21 Turid    M. mystacinus
+# 
+# # test <- Bats %>% select(BatID, Species) %>% distinct() %>% arrange(Species)
+# # print(test, n = 21)
+# # 1 Astrid   M. brandtii  
+# #  2 Dagny    M. brandtii  
+# #  3 Kaja     M. brandtii  
+# #  4 Maren    M. brandtii  
+# #  5 Nora     M. brandtii  
+# #  6 Phoebe   M. brandtii  
+# #  7 Steffi   M. brandtii  
+# #  8 Thea     M. brandtii  
+# #  9 Sofia    M. brandtii  
+# # 10 Amelia   M. mystacinus
+# # 11 Aricia   M. mystacinus
+# # 12 Daisy    M. mystacinus
+# # 13 Ethel    M. mystacinus
+# # 14 Ida      M. mystacinus
+# # 15 Line     M. mystacinus
+# # 16 Louise   M. mystacinus
+# # 17 Marie    M. mystacinus
+# # 18 Ragnhild M. mystacinus
+# # 19 Reeda    M. mystacinus
+# # 20 Stine    M. mystacinus
+# # 21 Turid    M. mystacinus
+# 
+# Bats.avail.df <- Bats.avail %>% 
+#   rename(Easting = coords.x, Northing = coords.y) 
+# head(Bats.avail.df)
+# #   used    Species BatID  Easting Northing
+# # 1    0 M.brandtii  Thea 604263.7  6658850
+# # 2    0 M.brandtii  Thea 607650.4  6659768
+# # 3    0 M.brandtii  Thea 604509.3  6658959
+# # 4    0 M.brandtii  Thea 608160.9  6659012
+# # 5    0 M.brandtii  Thea 604377.8  6660165
+# # 6    0 M.brandtii  Thea 604798.2  6658901
+# names(Bats.avail.df)
+# #"used"     "Species"  "BatID"    "Easting"  "Northing"
+# dim(Bats.avail.df)
+# #15020 5
+# 
+# Bats.used.df <- Bats.used@data
+# Bats.used.df$used <- 1
+# Bats.used.df$BatID <- as.character(Bats.used.df$BatID)
+# head(Bats.used.df)
+# names(Bats.used.df)
+# #"BatID"    "Easting"  "Northing" "used"  
+# dim(Bats.used.df)
+# # 1502        4
+# 
+# # 1502     + 15020 = 16522
+# 
+# #Combine Used and Avilable data for all Mbra individuals
+# rsf.data <- full_join(Bats.used.df, Bats.avail.df)
+# dim(rsf.data)
+# #16522     5 # good! 
+# 
+# rsf.data$BatID <- as.factor(rsf.data$BatID)
+# summary(rsf.data$BatID)
+#   # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise    Maren 
+#   #    176      990      891      913     1474     1287     1309     1001      605      704     1551 
+#   #  Marie     Nora   Phoebe Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+#   #    341      539      682      308      770      429      429      924     1111       88 
+# 
+# ## Some NAs introduced in the species column that should be fixed.
+# batmap <- Bats.avail %>% select(BatID, Species) %>% distinct()
+# rsf.data1 <- rsf.data %>% select(-Species)
+# rsf.data2 <- left_join(rsf.data1, batmap)
+# rsf.data2$UTM <- "UTM32"
+# 
+# ## export as a simple dataframe
+# #write.csv(rsf.data2, file = file.path(output_today, "used_available_pts_combined95KE.csv")) 
+# 
+# 
+# ## Make into a spatial object that can also be exported 
+# coords <- coordinates(rsf.data2)<-rsf.data2[,c("Easting","Northing")]
+# #assigning coordinates 
+# 
+# proj4string(rsf.data2)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+# #Define the projection 
+# crs(rsf.data2)
+# 
+# rsf.data2<-rsf.data2[!is.na(rsf.data2$Easting) | !is.na(rsf.data2$Northing),]
+# #Remove NA values  - There were none to remove 
+# 
+# ## Visualize to check if this worked 
+# srsf.data2 <- st_as_sf(rsf.data2, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+# mapview(srsf.data2) # This works! 
+# output_today
+# 
+# ## Exort as a geopackage
+# #st_write(srsf.data2, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/bats_rsf_pts.gpkg", driver = "GPKG")
 
 ```
 
@@ -2789,7 +2789,6 @@ tm_shape(range95Astrid_sf) +
 tm_shape(range95Dagny_sf) + 
   tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
   tm_fill(fill_alpha=.1, fill = "#32a5ff") +
-  
 
   tm_shape(Kaja_sf, bbox = bound_box) + 
   tmap_mode('view') +
