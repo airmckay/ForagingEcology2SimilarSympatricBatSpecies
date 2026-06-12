@@ -3118,7 +3118,7 @@ common_bbox <- st_bbox(c(
 
 # Brandts
 BrandtsHR <-
-  tm_shape(Brandts_ranges, bbox = bound_box) +
+  tm_shape(Brandts_ranges, bbox = common_bbox) +
   tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) +
   tm_fill(fill_alpha=.1, fill = "#32a5ff") +
   tm_shape(Brandts_points) +
@@ -3130,7 +3130,7 @@ BrandtsHR
 
 # Mystacinus 011f4b
 MystacinusHR <-
-  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_shape(Mystacinus_ranges, bbox = common_bbox) +
   tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) +
   tm_fill(fill_alpha=.1, fill = "#011f4b") +
   tm_shape(Mystacinus_points) +
@@ -3250,7 +3250,7 @@ tmap_save(
 ## Now sattelite
 
 CombinedHR <-
-  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_shape(Mystacinus_ranges, bbox = common_bbox) +
   tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
   tm_fill(col = "#011f4b", alpha = 0.1) +
   
@@ -3269,6 +3269,90 @@ CombinedHR <-
 
 CombinedHR
 
+
+
+### Now look at the most influential bats 
+
+bigbats_points <- rbind(
+  Dagny_sf,
+  Maren_sf,
+  Thea_sf
+)
+
+
+bigbats_ranges <- rbind(
+  range95Dagny_sf,
+  range95Maren_sf,
+  range95Thea_sf
+
+)
+
+
+# transform all to same CRS
+bigbats_points <- st_transform(bigbats_points, st_crs(bigbats_ranges))
+bigbats_ranges <- st_transform(bigbats_ranges, st_crs(bigbats_ranges))
+
+
+# clean geometries
+bigbats_ranges <- st_make_valid(bigbats_ranges[!st_is_empty(bigbats_ranges), ])
+bigbats_points <- st_make_valid(bigbats_points[!st_is_empty(bigbats_points), ])
+
+  tm_shape(Mystacinus_ranges, bbox = common_bbox) +
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) +
+  tm_fill(fill_alpha=.1, fill = "#011f4b") +
+  tm_shape(Mystacinus_points) +
+  tm_dots(fill = "#011f4b", size = 0.3, fill_alpha = 0.8) +
+  tm_basemap("CartoDB.Voyager") +
+  tm_scalebar(position = c("top", "right"), width = 100, text.size = 0.6)
+
+
+bigbatsHR <- 
+  tm_shape(bigbats_ranges, bbox = common_bbox) +
+  tm_borders(col = "salmon", lwd = 2, fill_alpha = 0.7) +
+  tm_fill(fill = "salmon", fill_alpha = 0.1) +
+  tm_shape(bigbats_points) +
+  tm_dots(fill = "salmon", size = 0.3, fill_alpha = 0.8) +
+  tm_basemap("Esri.WorldImagery") +
+  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+
+tmap_mode("view")
+bigbatsHR
+
+tmap_save(
+  bigbatsHR,
+  filename = file.path(output_today, "bigbatsHR_Sattelite.tiff"),
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 600
+)
+
+
+
+   tm_shape(Maren_sf, bbox = common_bbox) + 
+   tmap_mode('view') +
+   tm_basemap("CartoDB.Voyager") +
+   tm_dots(fill= "steelblue", size = .3, fill_alpha = .8) +
+ tm_shape(range95Maren_sf) + 
+   tm_borders(fill_alpha=.7, col = "steelblue", lwd = 2) + 
+   tm_fill(fill_alpha=.1, fill= "steelblue") 
+     
+   
+   tm_shape(Thea_sf, bbox = common_bbox) + 
+   tmap_mode('view') +
+   tm_basemap("CartoDB.Voyager") +
+   tm_dots(fill= "darkgreen", size = .3, fill_alpha = .8) +
+ tm_shape(range95Thea_sf) + 
+   tm_borders(fill_alpha=.7, col = "darkgreen", lwd = 2) + 
+   tm_fill(fill_alpha=.1, fill= "darkgreen") 
+   
+   tm_shape(Dagny_sf, bbox = common_bbox) + 
+   tmap_mode('view') +
+   tm_basemap("CartoDB.Voyager") +
+   tm_dots(fill= "tomato", size = .3, fill_alpha = .8) +
+   tm_shape(range95Dagny_sf) + 
+   tm_borders(fill_alpha=.7, col = "tomato", lwd = 2) + 
+   tm_fill(fill_alpha=.1, fill= "tomato")
 
 ```
 
