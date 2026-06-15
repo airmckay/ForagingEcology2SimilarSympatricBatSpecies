@@ -197,19 +197,10 @@ summary(Bats45$BD=="Yes") # Observations where the bat was picked up by a handhe
 
 ### Decide on a color palette
 ```{r}
-bugcolors <- c(
-  "#D8443C", "#9F5691", "#633372", 
-    "#E87E8B", "#92C051", "#1F6E9C",
-    "#F4C40F", "#DE597C", "#2B9B81", "#FE9B00")
 
 ### Conisdering using dark light blue and dark blue for brandts and mystacinus 
 batcolors <- c("#32a5ff", "#011f4b")
-#                MBRA      MMYS
-batbugc <- c(
-  "#D8443C", "#9F5691", "#633372", 
-    "#E87E8B", "#92C051", "#1F6E9C",
-    "#F4C40F", "#DE597C", "#2B9B81", "#FE9B00", 
-  "#32a5ff", "#011f4b") 
+#                MBRA      MMY
 
 displayColors(batcolors)
 
@@ -285,185 +276,14 @@ mapview(sMBRA)
 #####################################################
 MBRAll <- spTransform(MBRA, CRS("+proj=longlat"))
 MMYSll <- spTransform(MMYS, CRS("+proj=longlat"))
-#range95ll <- spTransform(MMYS, CRS("+proj=longlat"))
-
-# # Get the latitude and longitudes as a dataframe 
-# MBRAllcoords <- as.data.frame(MBRAll@coords)
-# str(MBRAllcoords)
-# 
-# mbrallcoords <- MBRAllcoords %>% rename(latitude = Northing, longitude = Easting)
-# 
-# d2dB <- bkde2D(cbind(mbrallcoords$longitude, mbrallcoords$latitude), bandwidth = c(1.5, 1.5)) 
-# 
-# contour(d2dB$x1,d2dB$x2,d2dB$fhat)
 
 leaflet() %>% addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% 
   addCircleMarkers(data = MBRAll, radius = 3, color = "#32a5ff", fillOpacity = 0.5) %>% 
   addCircleMarkers(data = MMYSll, radius = 3, color = "#011f4b", fillOpacity = 0.5) 
 
-# leaflet() %>% addProviderTiles("CartoDB.DarkMatter")
-
 
 ```
 
-
-## Kernel density plots for each individual bat 
-
-https://cran.r-project.org/web/packages/SpatialKDE/vignettes/SpatialKDE.html
-```{r}
-
-# bats <- sBats45 # save some typing 
-# 
-# cell_size <- 100
-# band_width <- 150
-# 
-# grid_bats <- bats %>% 
-#   create_grid_rectangular(cell_size = cell_size, side_offset = band_width)
-# 
-# kde <- bats %>% 
-#   kde(band_width = band_width, kernel = "quartic", grid = grid_bats)
-# 
-# tm_shape(kde) +
-#   tm_polygons(col = "kde_value", palette = "viridis", title = "KDE Estimate") +
-#   tm_shape(bats) +
-#   tm_bubbles(size = 0.1, col = "red")
-# 
-# ## Now make it a raster 
-# 
-# raster_bats <- bats %>% 
-#   create_raster(cell_size = cell_size, side_offset = band_width)
-# 
-# kder <- bats %>% 
-#   kde(band_width = band_width, kernel = "triweight", grid = raster_bats)
-# 
-# tm_shape(kder) +
-#   tm_raster(palette = "viridis", title = "KDE Estimate") +
-#   tm_shape(bats) +
-#   tm_bubbles(size = 0.1, col = "red") +
-#   tm_layout(legend.outside = TRUE)
-
-```
-
-
-## Alertnative approach 
-https://rpubs.com/titin/KDEinR
-```{r}
-
-kde.output <- kernelUD(Bats45, h="href", grid = 1000)
-
-plot(kde.output)
-
-kde <- raster(kde.output)
-# sets projection to British National Grid
-projection(kde) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-
-# maps the raster in tmap, "ud" is the density variable
-tm_shape(kde) + tm_raster("ud")
-
-
-bound_box <- bb(Bats45, ext = 1.5)
-tm_shape(kde, bbox = bound_box) + tm_raster("ud")
-
-
-masked_kde <- mask(kde, Bats45)
-
-# maps the masked raster, also maps white output area boundaries
-tm_shape(masked_kde, bbox = bound_box) + 
-  tm_raster("ud", style = "quantile", n = 100, legend.show = FALSE, palette = "YlGnBu") 
-
-
-range95 <- getverticeshr(kde.output, percent = 95)
-
-tm_shape(Bats45, bbox = bound_box) + tm_dots(col = "blue") +
-  tm_shape(range95) + tm_borders(alpha=.7, col = "#fb6a4a", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#fb6a4a") +
-  tm_layout(frame = FALSE)
-
-```
-
-
-
-
-### Now try to make individual Kernels for each bat species 
-```{r}
-
-bound_box <- bb(Bats45, ext = 1.5)
-##################################
-## MBRA
-##################################
-
-#MBRA <- MBRA[,-c(2,3)] 
-kde.outputB <- kernelUD(MBRA, h="href", grid = 1000)
-
-plot(kde.outputB)
-
-kdeB <- raster(kde.outputB)
-
-# sets projection to British National Grid
-projection(kdeB) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-
-# maps the raster in tmap, "ud" is the density variable
-tm_shape(kdeB) + tm_raster("ud")
-
-
-#bound_box <- bb(Bats45, ext = 1.5) # use the same for all images 
-tm_shape(kdeB, bbox = bound_box) + tm_raster("ud")
-
-
-masked_kdeB <- mask(kdeB, MBRA)
-
-# maps the masked raster, also maps white output area boundaries
-tm_shape(masked_kdeB, bbox = bound_box) + 
-  tm_raster("ud", style = "quantile", n = 100, legend.show = FALSE, palette = "YlGnBu") 
-
-
-range95B <- getverticeshr(kde.outputB, percent = 95)
-
-tm_shape(MBRA, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "salmon") +
-tm_shape(range95B) + tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
-  tm_fill(alpha=.1, col = "salmon") 
-# MBRA_95totalKernel.jpg
-
-##################################
-## MMYS
-##################################
-
-kde.outputM <- kernelUD(MMYS, h="href", grid = 1000)
-
-plot(kde.outputM)
-
-kdeM <- raster(kde.outputM)
-
-# sets projection to British National Grid
-projection(kdeM) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-# maps the raster in tmap, "ud" is the density variable
-tm_shape(kdeM) + tm_raster("ud")
-
-# use the same for all images 
-tm_shape(kdeM, bbox = bound_box) + tm_raster("ud")
-
-masked_kdeM <- mask(kdeM, MMYS)
-
-# maps the masked raster, also maps white output area boundaries
-tm_shape(masked_kdeM, bbox = bound_box) + 
-  tm_raster("ud", style = "quantile", n = 100, legend.show = FALSE, palette = "YlGnBu") 
-
-range95M <- getverticeshr(kde.outputM, percent = 95)
-
-tm_shape(MMYS, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "turquoise") +
-tm_shape(range95M) + tm_borders(alpha=.7, col = "turquoise", lwd = 2) + 
-  tm_fill(alpha=.1, col = "turquoise") 
-# MBRA_95totalKernel.jpg
-```
 
 
 ## Create a 95% kernel for each individual bat 
@@ -475,6 +295,7 @@ levels(MBRA$BatID)
 ```{r}
 
 bound_box <- bb(Bats45, ext = 1.5)
+
 ##################################
 ## Astrid 
 Astrid <- subset(MBRA, BatID == "Astrid") 
@@ -494,64 +315,20 @@ projection(kdeAstrid) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeAstrid <- mask(kdeAstrid, Astrid)
 
-## Different home range estimations 
-# range75Astrid <- getverticeshr(kde.outputAstrid, percent = 75)
-# range85Astrid <- getverticeshr(kde.outputAstrid, percent = 85)
-# range90Astrid <- getverticeshr(kde.outputAstrid, percent = 90)
 range95Astrid <- getverticeshr(kde.outputAstrid, percent = 95)
 
+Astrid_sf <- st_as_sf(Astrid)
+range95Astrid_sf<- st_as_sf(range95Astrid)
 
-# image plots of 95, 85 and 75 kernels
-# 
-# p75 <- tm_shape(Astrid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Astrid) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Astrid 75%")
-# 
-# p85 <- tm_shape(Astrid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Astrid) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Astrid 85%")
-# 
-# p90 <- tm_shape(Astrid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Astrid) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Astrid 90%")
 
-p95 <- tm_shape(Astrid, bbox = bound_box) + 
+  tm_shape(Astrid_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Astrid) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Astrid 95%")
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill = "#32a5ff") +
+tm_shape(range95Astrid_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff")
 
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-# 
-# Warning message:
-# The shape range95Astrid is invalid (after reprojection). See sf::st_is_valid 
 
 #################################################
 
@@ -573,67 +350,19 @@ projection(kdeDagny) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeDagny <- mask(kdeDagny, Dagny)
 
-# ## Different home range estimations 
-# range75Dagny <- getverticeshr(kde.outputDagny, percent = 75)
-# range85Dagny <- getverticeshr(kde.outputDagny, percent = 85)
-# range90Dagny <- getverticeshr(kde.outputDagny, percent = 90)
 range95Dagny <- getverticeshr(kde.outputDagny, percent = 95)
 
+Dagny_sf <- st_as_sf(Dagny)
+range95Dagny_sf <- st_as_sf(range95Dagny)
 
-# image plots of 95, 85 and 75 kernels
 
-# p75 <- tm_shape(Dagny, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Dagny) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Dagny 75%")
-# 
-# p85 <- tm_shape(Dagny, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Dagny) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Dagny 85%")
-# 
-# p90 <- tm_shape(Dagny, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Dagny) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Dagny 90%")
-
-p95 <- tm_shape(Dagny, bbox = bound_box) + 
+  tm_shape(Dagny_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Dagny) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Dagny 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-# image plots of 95, 85 and 75 kernels
-
-# Warning messages:
-# 1: The shape range85Dagny is invalid (after reprojection). See sf::st_is_valid 
-# 2: The shape range90Dagny is invalid (after reprojection). See sf::st_is_valid 
-# 3: The shape range95Dagny is invalid (after reprojection). See sf::st_is_valid 
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill = "#32a5ff") +
+tm_shape(range95Dagny_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill = "#32a5ff") 
 
 #################################################
 
@@ -655,61 +384,18 @@ projection(kdeKaja) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeKaja <- mask(kdeKaja, Kaja)
 
-## Different home range estimations 
-# range75Kaja <- getverticeshr(kde.outputKaja, percent = 75)
-# range85Kaja <- getverticeshr(kde.outputKaja, percent = 85)
-# range90Kaja <- getverticeshr(kde.outputKaja, percent = 90)
 range95Kaja <- getverticeshr(kde.outputKaja, percent = 95)
 
+Kaja_sf <- st_as_sf(Kaja)
+range95Kaja_sf <- st_as_sf(range95Kaja)
 
-# image plots of 95, 85 and 75 kernels
-# 
-# p75 <- tm_shape(Kaja, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Kaja) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Kaja 75%")
-# 
-# p85 <- tm_shape(Kaja, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Kaja) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Kaja 85%")
-# 
-# p90 <- tm_shape(Kaja, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Kaja) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Kaja 90%")
-
-# p95 <- tm_shape(Kaja, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range95Kaja) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Kaja 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_shape(Kaja_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Kaja_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") 
 
 #################################################
 
@@ -731,61 +417,18 @@ projection(kdeMaren) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeMaren <- mask(kdeMaren, Maren)
 
-## Different home range estimations 
-# range75Maren <- getverticeshr(kde.outputMaren, percent = 75)
-# range85Maren <- getverticeshr(kde.outputMaren, percent = 85)
-# range90Maren <- getverticeshr(kde.outputMaren, percent = 90)
 range95Maren <- getverticeshr(kde.outputMaren, percent = 95)
 
+Maren_sf <- st_as_sf(Maren)
+range95Maren_sf <- st_as_sf(range95Maren)
 
-# # image plots of 95, 85 and 75 kernels
-# 
-# p75 <- tm_shape(Maren, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Maren) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Maren 75%")
-# 
-# p85 <- tm_shape(Maren, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Maren) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Maren 85%")
-# 
-# p90 <- tm_shape(Maren, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Maren) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Maren 90%")
-
-p95 <- tm_shape(Maren, bbox = bound_box) + 
+  tm_shape(Maren_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Maren) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Maren 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Maren_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff")
 
 #################################################
 
@@ -807,61 +450,18 @@ projection(kdeNora) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeNora <- mask(kdeNora, Nora)
 
-## Different home range estimations 
-# range75Nora <- getverticeshr(kde.outputNora, percent = 75)
-# range85Nora <- getverticeshr(kde.outputNora, percent = 85)
-# range90Nora <- getverticeshr(kde.outputNora, percent = 90)
 range95Nora <- getverticeshr(kde.outputNora, percent = 95)
 
+Nora_sf <- st_as_sf(Nora)
+range95Nora_sf <- st_as_sf(range95Nora)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Nora, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Nora) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Nora 75%")
-# 
-# p85 <- tm_shape(Nora, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Nora) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Nora 85%")
-# 
-# p90 <- tm_shape(Nora, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Nora) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Nora 90%")
-
-p95 <- tm_shape(Nora, bbox = bound_box) + 
+  tm_shape(Nora_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Nora) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Nora 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Nora_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff")
 
 
 #################################################
@@ -884,61 +484,18 @@ projection(kdePhoebe) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdePhoebe <- mask(kdePhoebe, Phoebe)
 
-## Different home range estimations 
-# range75Phoebe <- getverticeshr(kde.outputPhoebe, percent = 75)
-# range85Phoebe <- getverticeshr(kde.outputPhoebe, percent = 85)
-# range90Phoebe <- getverticeshr(kde.outputPhoebe, percent = 90)
 range95Phoebe <- getverticeshr(kde.outputPhoebe, percent = 95)
 
+Phoebe_sf <- st_as_sf(Phoebe)
+range95Phoebe_sf <- st_as_sf(range95Phoebe)
 
-# # image plots of 95, 85 and 75 kernels
-# 
-# p75 <- tm_shape(Phoebe, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Phoebe) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Phoebe 75%")
-# 
-# p85 <- tm_shape(Phoebe, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Phoebe) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Phoebe 85%")
-# 
-# p90 <- tm_shape(Phoebe, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Phoebe) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Phoebe 90%")
-
-p95 <- tm_shape(Phoebe, bbox = bound_box) + 
+  tm_shape(Phoebe_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Phoebe) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Phoebe 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Phoebe_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff") 
 
 
 #################################################
@@ -961,62 +518,19 @@ projection(kdeSofia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeSofia <- mask(kdeSofia, Sofia)
 
-## Different home range estimations 
-# range75Sofia <- getverticeshr(kde.outputSofia, percent = 75)
-# range85Sofia <- getverticeshr(kde.outputSofia, percent = 85)
-# range90Sofia <- getverticeshr(kde.outputSofia, percent = 90)
 range95Sofia <- getverticeshr(kde.outputSofia, percent = 95)
 
+Sofia_sf <- st_as_sf(Sofia)
+range95Sofia_sf <- st_as_sf(range95Sofia)
 
-# # image plots of 95, 85 and 75 kernels
-# 
-# p75 <- tm_shape(Sofia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Sofia) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Sofia 75%")
-# 
-# p85 <- tm_shape(Sofia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Sofia) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Sofia 85%")
-# 
-# p90 <- tm_shape(Sofia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Sofia) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Sofia 90%")
-
-p95 <- tm_shape(Sofia, bbox = bound_box) + 
+  tm_shape(Sofia_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Sofia) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Sofia 95%")
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Sofia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff")
 
-p95
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 #################################################
 
@@ -1038,61 +552,18 @@ projection(kdeSteffi) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeSteffi <- mask(kdeSteffi, Steffi)
 
-## Different home range estimations 
-# range75Steffi <- getverticeshr(kde.outputSteffi, percent = 75)
-# range85Steffi <- getverticeshr(kde.outputSteffi, percent = 85)
-# range90Steffi <- getverticeshr(kde.outputSteffi, percent = 90)
 range95Steffi <- getverticeshr(kde.outputSteffi, percent = 95)
 
+Steffi_sf <- st_as_sf(Steffi)
+range95Steffi_sf <- st_as_sf(range95Steffi)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Steffi, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range75Steffi) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Steffi 75%")
-# 
-# p85 <- tm_shape(Steffi, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Steffi) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Steffi 85%")
-# 
-# p90 <- tm_shape(Steffi, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Steffi) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Steffi 90%")
-
-p95 <- tm_shape(Steffi, bbox = bound_box) + 
+  tm_shape(Steffi_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Steffi) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Steffi 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-#tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Steffi_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff")
 
 #################################################
 
@@ -1114,66 +585,21 @@ projection(kdeThea) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeThea <- mask(kdeThea, Thea)
 
-# ## Different home range estimations 
-# range75Thea <- getverticeshr(kde.outputThea, percent = 75)
-# #range75Thea <- st_is_valid(getverticeshr(kde.outputThea, percent = 75))
-# range85Thea <- getverticeshr(kde.outputThea, percent = 85)
-# range90Thea <- getverticeshr(kde.outputThea, percent = 90)
 range95Thea <- getverticeshr(kde.outputThea, percent = 95)
-#area(range95Thea)/1000000 # this gives km2 
 
-# check <- st_as_sf(range95Thea)
-# st_area(check) ## the area is in m2 
+Thea_sf <- st_as_sf(Thea)
+range95Thea_sf <- st_as_sf(range95Thea)
 
-# image plots of 95, 85 and 75 kernels
-# 
-# p75 <- tm_shape(Thea, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-#   tm_shape(range75Thea) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Thea 75%")
-# p75
-# 
-# p85 <- tm_shape(Thea, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range85Thea) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Thea 85%")
-# 
-# p90 <- tm_shape(Thea, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#32a5ff") +
-# tm_shape(range90Thea) + 
-#   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#32a5ff") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Thea 90%")
-
-p95 <- tm_shape(Thea, bbox = bound_box) + 
+  tm_shape(Thea_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#32a5ff") +
-tm_shape(range95Thea) + 
-  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#32a5ff") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Thea 95%")
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#32a5ff") +
+tm_shape(range95Thea_sf) + 
+  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#32a5ff")
 
-# p75
-# p85
-# p90
-# p95
-
-#tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+#######################################################
+  
 
 ```
 
@@ -1203,61 +629,18 @@ projection(kdeAmelia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeAmelia <- mask(kdeAmelia, Amelia)
 
-## Different home range estimations 
-# range75Amelia <- getverticeshr(kde.outputAmelia, percent = 75)
-# range85Amelia <- getverticeshr(kde.outputAmelia, percent = 85)
-# range90Amelia <- getverticeshr(kde.outputAmelia, percent = 90)
 range95Amelia <- getverticeshr(kde.outputAmelia, percent = 95)
 
+Amelia_sf <- st_as_sf(Amelia)
+range95Amelia_sf<- st_as_sf(range95Amelia)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Amelia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Amelia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Amelia 75%")
-# 
-# p85 <- tm_shape(Amelia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Amelia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Amelia 85%")
-# 
-# p90 <- tm_shape(Amelia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Amelia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Amelia 90%")
-
-p95 <- tm_shape(Amelia, bbox = bound_box) + 
+  tm_shape(Amelia_sf, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
-  tm_dots(col = "#011f4b") +
-tm_shape(range95Amelia) + 
-  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(alpha=.1, col = "#011f4b") +
-  tmap_options(check.and.fix = TRUE) + 
-  tm_layout(title = "Amelia 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-#tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Amelia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 # 
 #################################################
 
@@ -1279,62 +662,19 @@ projection(kdeAricia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeAricia <- mask(kdeAricia, Aricia)
 
-## Different home range estimations 
-# range75Aricia <- getverticeshr(kde.outputAricia, percent = 75)
-# range85Aricia <- getverticeshr(kde.outputAricia, percent = 85)
-# range90Aricia <- getverticeshr(kde.outputAricia, percent = 90)
 range95Aricia <- getverticeshr(kde.outputAricia, percent = 95)
 
+Aricia_sf <- st_as_sf(Aricia)
+range95Aricia_sf<- st_as_sf(range95Aricia)
 
-# image plots of 95, 85 and 75 kernels
+  tm_shape(Aricia_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Aricia_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") 
 
-# p75 <- tm_shape(Aricia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Aricia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Aricia 75%")
-# 
-# p85 <- tm_shape(Aricia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Aricia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Aricia 85%")
-# 
-# p90 <- tm_shape(Aricia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Aricia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Aricia 90%")
-
-# p95 <- tm_shape(Aricia, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Aricia) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Aricia 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-# 
 #########################################################
 
 ## Daisy 
@@ -1346,8 +686,6 @@ str(Daisy)
 
 kde.outputDaisy <- kernelUD(Daisy, h="href", grid = 1000)
 
-plot(kde.outputDaisy)
-
 kdeDaisy <- raster(kde.outputDaisy)
 
 # sets projection to British National Grid
@@ -1355,62 +693,18 @@ projection(kdeDaisy) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeDaisy <- mask(kdeDaisy, Daisy)
 
-## Different home range estimations 
-# range75Daisy <- getverticeshr(kde.outputDaisy, percent = 75)
-# range85Daisy <- getverticeshr(kde.outputDaisy, percent = 85)
-# range90Daisy <- getverticeshr(kde.outputDaisy, percent = 90)
 range95Daisy <- getverticeshr(kde.outputDaisy, percent = 95)
 
+Daisy_sf <- st_as_sf(Daisy)
+range95Daisy_sf<- st_as_sf(range95Daisy)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Daisy, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Daisy) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Daisy 75%")
-# 
-# p85 <- tm_shape(Daisy, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Daisy) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Daisy 85%")
-# 
-# p90 <- tm_shape(Daisy, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Daisy) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Daisy 90%")
-
-# p95 <- tm_shape(Daisy, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Daisy) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Daisy 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-
+  tm_shape(Daisy_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Daisy_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 #########################################################
 
 ## Ethel 
@@ -1422,8 +716,6 @@ str(Ethel)
 
 kde.outputEthel <- kernelUD(Ethel, h="href", grid = 1000)
 
-plot(kde.outputEthel)
-
 kdeEthel <- raster(kde.outputEthel)
 
 # sets projection to British National Grid
@@ -1431,61 +723,19 @@ projection(kdeEthel) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeEthel <- mask(kdeEthel, Ethel)
 
-## Different home range estimations 
-# range75Ethel <- getverticeshr(kde.outputEthel, percent = 75)
-# range85Ethel <- getverticeshr(kde.outputEthel, percent = 85)
-# range90Ethel <- getverticeshr(kde.outputEthel, percent = 90)
 range95Ethel <- getverticeshr(kde.outputEthel, percent = 95)
 
+Ethel_sf <- st_as_sf(Ethel)
+range95Ethel_sf<- st_as_sf(range95Ethel)
 
-# image plots of 95, 85 and 75 kernels
+  tm_shape(Ethel_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Ethel_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
-# p75 <- tm_shape(Ethel, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Ethel) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ethel 75%")
-# 
-# p85 <- tm_shape(Ethel, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Ethel) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ethel 85%")
-# 
-# p90 <- tm_shape(Ethel, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Ethel) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ethel 90%")
-
-# p95 <- tm_shape(Ethel, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Ethel) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ethel 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 #########################################################
 
@@ -1507,61 +757,18 @@ projection(kdeIda) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_
 
 masked_kdeIda <- mask(kdeIda, Ida)
 
-## Different home range estimations 
-# range75Ida <- getverticeshr(kde.outputIda, percent = 75)
-# range85Ida <- getverticeshr(kde.outputIda, percent = 85)
-# range90Ida <- getverticeshr(kde.outputIda, percent = 90)
 range95Ida <- getverticeshr(kde.outputIda, percent = 95)
 
+Ida_sf <- st_as_sf(Ida)
+range95Ida_sf<- st_as_sf(range95Ida)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Ida, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Ida) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ida 75%")
-# 
-# p85 <- tm_shape(Ida, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Ida) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ida 85%")
-# 
-# p90 <- tm_shape(Ida, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Ida) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ida 90%")
-
-# p95 <- tm_shape(Ida, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Ida) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ida 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_shape(Ida_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Ida_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
 #########################################################
 
@@ -1574,8 +781,6 @@ str(Line)
 
 kde.outputLine <- kernelUD(Line, h="href", grid = 1000)
 
-plot(kde.outputLine)
-
 kdeLine <- raster(kde.outputLine)
 
 # sets projection to British National Grid
@@ -1583,61 +788,18 @@ projection(kdeLine) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeLine <- mask(kdeLine, Line)
 
-## Different home range estimations 
-# range75Line <- getverticeshr(kde.outputLine, percent = 75)
-# range85Line <- getverticeshr(kde.outputLine, percent = 85)
-# range90Line <- getverticeshr(kde.outputLine, percent = 90)
 range95Line <- getverticeshr(kde.outputLine, percent = 95)
 
+Line_sf <- st_as_sf(Line)
+range95Line_sf<- st_as_sf(range95Line)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Line, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Line) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Line 75%")
-# 
-# p85 <- tm_shape(Line, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Line) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Line 85%")
-# 
-# p90 <- tm_shape(Line, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Line) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Line 90%")
-
-# p95 <- tm_shape(Line, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Line) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Line 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_shape(Line_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Line_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
 #########################################################
 
@@ -1650,8 +812,6 @@ str(Louise)
 
 kde.outputLouise <- kernelUD(Louise, h="href", grid = 1000)
 
-plot(kde.outputLouise)
-
 kdeLouise <- raster(kde.outputLouise)
 
 # sets projection to British National Grid
@@ -1659,61 +819,18 @@ projection(kdeLouise) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeLouise <- mask(kdeLouise, Louise)
 
-## Different home range estimations 
-# range75Louise <- getverticeshr(kde.outputLouise, percent = 75)
-# range85Louise <- getverticeshr(kde.outputLouise, percent = 85)
-# range90Louise <- getverticeshr(kde.outputLouise, percent = 90)
 range95Louise <- getverticeshr(kde.outputLouise, percent = 95)
 
+Louise_sf <- st_as_sf(Louise)
+range95Louise_sf<- st_as_sf(range95Louise)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Louise, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Louise) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Louise 75%")
-# 
-# p85 <- tm_shape(Louise, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Louise) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Louise 85%")
-# 
-# p90 <- tm_shape(Louise, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Louise) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Louise 90%")
-
-# p95 <- tm_shape(Louise, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Louise) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Louise 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_shape(Louise_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Louise_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b") 
 
 #########################################################
 
@@ -1726,8 +843,6 @@ str(Marie)
 
 kde.outputMarie <- kernelUD(Marie, h="href", grid = 1000)
 
-plot(kde.outputMarie)
-
 kdeMarie <- raster(kde.outputMarie)
 
 # sets projection to British National Grid
@@ -1735,62 +850,18 @@ projection(kdeMarie) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeMarie <- mask(kdeMarie, Marie)
 
-## Different home range estimations 
-# range75Marie <- getverticeshr(kde.outputMarie, percent = 75)
-# range85Marie <- getverticeshr(kde.outputMarie, percent = 85)
-# range90Marie <- getverticeshr(kde.outputMarie, percent = 90)
 range95Marie <- getverticeshr(kde.outputMarie, percent = 95)
 
+Marie_sf <- st_as_sf(Marie)
+range95Marie_sf<- st_as_sf(range95Marie)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Marie, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Marie) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Marie 75%")
-# 
-# p85 <- tm_shape(Marie, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Marie) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Marie 85%")
-# 
-# p90 <- tm_shape(Marie, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Marie) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Marie 90%")
-
-# p95 <- tm_shape(Marie, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Marie) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Marie 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-
+  tm_shape(Marie_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Marie_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 #########################################################
 
 ## Ragnhild 
@@ -1811,63 +882,21 @@ projection(kdeRagnhild) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m
 
 masked_kdeRagnhild <- mask(kdeRagnhild, Ragnhild)
 
-## Different home range estimations 
-# range75Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 75)
-# range85Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 85)
-# range90Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 90)
+
 range95Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 95)
 
+Ragnhild_sf <- st_as_sf(Ragnhild)
+range95Ragnhild_sf<- st_as_sf(range95Ragnhild)
 
-# image plots of 95, 85 and 75 kernels
+  tm_shape(Ragnhild_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Ragnhild_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
-# p75 <- tm_shape(Ragnhild, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Ragnhild) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ragnhild 75%")
-# 
-# p85 <- tm_shape(Ragnhild, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Ragnhild) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ragnhild 85%")
-# 
-# p90 <- tm_shape(Ragnhild, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Ragnhild) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ragnhild 90%")
-
-# p95 <- tm_shape(Ragnhild, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Ragnhild) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Ragnhild 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-
-#########################################################
+  #########################################################
 
 ## Reeda 
 Reeda <- subset(MMYS, BatID == "Reeda") 
@@ -1878,8 +907,6 @@ str(Reeda)
 
 kde.outputReeda <- kernelUD(Reeda, h="href", grid = 1000)
 
-plot(kde.outputReeda)
-
 kdeReeda <- raster(kde.outputReeda)
 
 # sets projection to British National Grid
@@ -1887,61 +914,18 @@ projection(kdeReeda) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeReeda <- mask(kdeReeda, Reeda)
 
-## Different home range estimations 
-# range75Reeda <- getverticeshr(kde.outputReeda, percent = 75)
-# range85Reeda <- getverticeshr(kde.outputReeda, percent = 85)
-# range90Reeda <- getverticeshr(kde.outputReeda, percent = 90)
 range95Reeda <- getverticeshr(kde.outputReeda, percent = 95)
 
+Reeda_sf <- st_as_sf(Reeda)
+range95Reeda_sf<- st_as_sf(range95Reeda)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Reeda, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Reeda) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Reeda 75%")
-# 
-# p85 <- tm_shape(Reeda, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Reeda) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Reeda 85%")
-# 
-# p90 <- tm_shape(Reeda, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Reeda) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Reeda 90%")
-# 
-# p95 <- tm_shape(Reeda, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Reeda) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Reeda 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_shape(Reeda_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Reeda_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
 #########################################################
 
@@ -1963,61 +947,18 @@ projection(kdeStine) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeStine <- mask(kdeStine, Stine)
 
-## Different home range estimations 
-# range75Stine <- getverticeshr(kde.outputStine, percent = 75)
-# range85Stine <- getverticeshr(kde.outputStine, percent = 85)
-# range90Stine <- getverticeshr(kde.outputStine, percent = 90)
 range95Stine <- getverticeshr(kde.outputStine, percent = 95)
 
+Stine_sf <- st_as_sf(Stine)
+range95Stine_sf<- st_as_sf(range95Stine)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Stine, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Stine) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Stine 75%")
-# 
-# p85 <- tm_shape(Stine, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Stine) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Stine 85%")
-# 
-# p90 <- tm_shape(Stine, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Stine) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Stine 90%")
-
-# p95 <- tm_shape(Stine, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Stine) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Stine 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+  tm_shape(Stine_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Stine_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
 #########################################################
 
@@ -2039,64 +980,18 @@ projection(kdeTurid) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeTurid <- mask(kdeTurid, Turid)
 
-## Different home range estimations 
-# range75Turid <- getverticeshr(kde.outputTurid, percent = 75)
-# range85Turid <- getverticeshr(kde.outputTurid, percent = 85)
-# range90Turid <- getverticeshr(kde.outputTurid, percent = 90)
 range95Turid <- getverticeshr(kde.outputTurid, percent = 95)
-library(geosphere)
 
-areaPolygon(range95Turid)
+Turid_sf <- st_as_sf(Turid)
+range95Turid_sf<- st_as_sf(range95Turid)
 
-# image plots of 95, 85 and 75 kernels
-
-# p75 <- tm_shape(Turid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range75Turid) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Turid 75%")
-# 
-# p85 <- tm_shape(Turid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range85Turid) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Turid 85%")
-# 
-# p90 <- tm_shape(Turid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range90Turid) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Turid 90%")
-
-# p95 <- tm_shape(Turid, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("Esri.WorldTopoMap") +
-#   tm_dots(col = "#011f4b") +
-# tm_shape(range95Turid) + 
-#   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
-#   tm_fill(alpha=.1, col = "#011f4b") +
-#   tmap_options(check.and.fix = TRUE) + 
-#   tm_layout(title = "Turid 95%")
-
-# p75
-# p85
-# p90
-# p95
-
-# tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
-
+  tm_shape(Turid_sf, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("CartoDB.Voyager") +
+  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
+tm_shape(range95Turid_sf) + 
+  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(fill_alpha=.1, fill= "#011f4b")
 
 ```
 
@@ -2504,515 +1399,237 @@ areaPolygon(range95Turid)
 ## Summary results for the manuscript 
 ```{r}
 ## Summary of the "raw" data 
-mystacinus<- Bats$BatID %in% c("Amelia","Marie", "Turid", "Reeda", "Daisy", "Line", "Stine", "Ethel", "Ragnhild", "Ida", "Louise", "Aricia")
-
-Bats$Species<-ifelse(mystacinus == TRUE, "M. mystacinus", "M. brandtii")
-Bats$Species<- as.factor(Bats$Species)
-
-B <- Bats %>% filter(Species == "M. brandtii") %>% droplevels()
-M <- Bats %>% filter(Species == "M. mystacinus") %>% droplevels()
-
-levels(B$BatID)
-levels(M$BatID)
-
-knitr::kable(table(B$BatID)) %>% kable_minimal() # Number of real obs 
-knitr::kable(table(M$BatID)) %>% kable_minimal() # Number of real obs 
-
-summary(rsf.data2)
-rsf.data2$Species <- factor(rsf.data2$Species)
-rsf.data2$BatID <- factor(rsf.data2$BatID)
-
-# rsf.data2B <- rsf.data2 %>% dplyr::filter(Species == "M.brandtii") 
-# rsf.data2M <- rsf.data2 %>% dplyr::filter(Species == "M.mystacinus") %>% droplevels()
+# mystacinus<- Bats$BatID %in% c("Amelia","Marie", "Turid", "Reeda", "Daisy", "Line", "Stine", "Ethel", "Ragnhild", "Ida", "Louise", "Aricia")
 # 
-# knitr::kable(table(rsf.data2B $BatID)) %>% kable_minimal() # Number of total obs 
-# knitr::kable(table(rsf.data2M$BatID)) %>% kable_minimal() # Number of total obs 
+# Bats$Species<-ifelse(mystacinus == TRUE, "M. mystacinus", "M. brandtii")
+# Bats$Species<- as.factor(Bats$Species)
+# 
+# B <- Bats %>% filter(Species == "M. brandtii") %>% droplevels()
+# M <- Bats %>% filter(Species == "M. mystacinus") %>% droplevels()
+# 
+# levels(B$BatID)
+# levels(M$BatID)
+# 
+# knitr::kable(table(B$BatID)) %>% kable_minimal() # Number of real obs 
+# knitr::kable(table(M$BatID)) %>% kable_minimal() # Number of real obs 
+# 
+# summary(rsf.data2)
+# rsf.data2$Species <- factor(rsf.data2$Species)
+# rsf.data2$BatID <- factor(rsf.data2$BatID)
+# 
+# # rsf.data2B <- rsf.data2 %>% dplyr::filter(Species == "M.brandtii") 
+# # rsf.data2M <- rsf.data2 %>% dplyr::filter(Species == "M.mystacinus") %>% droplevels()
+# # 
+# # knitr::kable(table(rsf.data2B $BatID)) %>% kable_minimal() # Number of total obs 
+# # knitr::kable(table(rsf.data2M$BatID)) %>% kable_minimal() # Number of total obs 
+# 
+# knitr::kable(table(rsf.data2$BatID)) %>% kable_minimal() 
+# # Number of total obs 
+# 
+# rsf.avail <- rsf.data %>% filter(used == 0)
+# rsf.availB <- rsf.data %>% filter(Species == "M.brandtii") %>% droplevels()
+# rsf.availM <- rsf.data %>% filter(Species == "M.mystacinus") %>% droplevels()
+# 
+# knitr::kable(table(rsf.availB $BatID)) %>% kable_minimal() # Number of avail obs 
+# knitr::kable(table(rsf.availM$BatID)) %>% kable_minimal() # Number of avail obs 
+# 
+# ## Calculate the area of the home range 
+# ## MBRA
+# area <- area(range95Astrid)
+# BatID <- "Astrid"
+# Astrid_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Dagny)
+# BatID <- "Dagny"
+# Dagny_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Kaja)
+# BatID <- "Kaja"
+# Kaja_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Maren)
+# BatID <- "Maren"
+# Maren_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Nora)
+# BatID <- "Nora"
+# Nora_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Phoebe)
+# BatID <- "Phoebe"
+# Phoebe_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Sofia)
+# BatID <- "Sofia"
+# Sofia_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Steffi)
+# BatID <- "Steffi"
+# Steffi_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Thea)
+# BatID <- "Thea"
+# Thea_area <- as.data.frame(cbind(area, BatID ))
+# 
+# # MMYS
+# area <- area(range95Amelia)
+# BatID <- "Amelia"
+# Amelia_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Aricia)
+# BatID <- "Aricia"
+# Aricia_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Daisy)
+# BatID <- "Daisy"
+# Daisy_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Ethel)
+# BatID <- "Ethel"
+# Ethel_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Ida)
+# BatID <- "Ida"
+# Ida_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Line)
+# BatID <- "Line"
+# Line_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Louise)
+# BatID <- "Louise"
+# Louise_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Marie)
+# BatID <- "Marie"
+# Marie_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Ragnhild)
+# BatID <- "Ragnhild"
+# Ragnhild_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Reeda)
+# BatID <- "Reeda"
+# Reeda_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Stine)
+# BatID <- "Stine"
+# Stine_area <- as.data.frame(cbind(area, BatID ))
+# 
+# area <- area(range95Turid)
+# BatID <- "Turid"
+# Turid_area <- as.data.frame(cbind(area, BatID ))
+# 
+# listarea <- list(Astrid_area, Dagny_area, Kaja_area, # M. brandtii 
+#                  Maren_area, Nora_area, Phoebe_area, 
+#                  Sofia_area, Steffi_area, Thea_area, 
+#                  Amelia_area, Aricia_area, Daisy_area, # M. mystacinus
+#                  Ethel_area, Ida_area, Line_area, 
+#                  Louise_area, Marie_area, Ragnhild_area, 
+#                  Reeda_area, Stine_area, Turid_area) #list of 21, good
+# 
+# ## The area column is in m2 - create another that is in km2 
+# allarea <- listarea %>% reduce(full_join, by=c('BatID', 'area')) 
+# allarea$area <- as.numeric(allarea$area)
+# allarea$area_km <- round(allarea$area /1000000 ,2)
+# 
+# allarea <- allarea %>% 
+#   mutate(Species = case_when(
+#     BatID %in% c("Amelia","Marie", "Turid", 
+#                  "Reeda", "Daisy", "Line", 
+#                  "Stine", "Ethel", "Ragnhild", 
+#                  "Ida", "Louise", "Aricia") ~ "M. mystacinus", 
+#     TRUE ~ "M. brandtii")) %>% 
+#   mutate(Species = factor(Species)) %>% select(-area)
+# 
+# allareaB <- allarea %>% filter(Species == "M. brandtii") %>% select(-Species) %>% droplevels()
+# allareaM <- allarea %>% filter(Species == "M. mystacinus") %>% select(-Species) %>% droplevels()
+# 
+# knitr::kable(allareaB) %>% kable_minimal() # Number of avail obs 
+# knitr::kable(allareaM) %>% kable_minimal() # Number of avail obs 
+# 
+# ## MBRA
+# # mean points for brandts bats
+# mean(c(81,
+# 83,
+# 91,
+# 141,
+# 49,
+# 62,
+# 39,
+# 39,
+# 101))
+# 
+# # mean total points for brandts bats 
+# mean(c(891,
+# 913,
+# 1001,
+# 1551,
+# 539,
+# 682,
+# 429,
+# 429,
+# 1111))
+# 
+# #mean home range in km2
+# mean(c(7.59,
+# 1.94,
+# 0.11,
+# 1.60,
+# 5.23,
+# 12.74,
+# 4.05,
+# 1.90,
+# 0.83))
+# 
+# ## MMYS
+# # mean points for mystacinus bats
+# mean(c(16,
+# 90,
+# 134,
+# 117,
+# 119,
+# 55,
+# 64,
+# 31,
+# 28,
+# 70,
+# 84,
+# 8))
+# 
+# # mean total points for mystacincus bats 
+# mean(c(176,
+# 990,
+# 1474,
+# 1287,
+# 1309,
+# 605,
+# 704,
+# 341,
+# 308,
+# 770,
+# 924,
+# 88))
+# 
+# #mean home range in km2
+# mean(c(0.46,
+# 1.05,
+# 0.39,
+# 1.52,
+# 0.57,
+# 0.30,
+# 0.61,
+# 1.24,
+# 0.40,
+# 0.08,
+# 1.87,
+# 0.12))
 
-knitr::kable(table(rsf.data2$BatID)) %>% kable_minimal() 
-# Number of total obs 
-
-rsf.avail <- rsf.data %>% filter(used == 0)
-rsf.availB <- rsf.data %>% filter(Species == "M.brandtii") %>% droplevels()
-rsf.availM <- rsf.data %>% filter(Species == "M.mystacinus") %>% droplevels()
-
-knitr::kable(table(rsf.availB $BatID)) %>% kable_minimal() # Number of avail obs 
-knitr::kable(table(rsf.availM$BatID)) %>% kable_minimal() # Number of avail obs 
-
-## Calculate the area of the home range 
-## MBRA
-area <- area(range95Astrid)
-BatID <- "Astrid"
-Astrid_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Dagny)
-BatID <- "Dagny"
-Dagny_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Kaja)
-BatID <- "Kaja"
-Kaja_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Maren)
-BatID <- "Maren"
-Maren_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Nora)
-BatID <- "Nora"
-Nora_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Phoebe)
-BatID <- "Phoebe"
-Phoebe_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Sofia)
-BatID <- "Sofia"
-Sofia_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Steffi)
-BatID <- "Steffi"
-Steffi_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Thea)
-BatID <- "Thea"
-Thea_area <- as.data.frame(cbind(area, BatID ))
-
-# MMYS
-area <- area(range95Amelia)
-BatID <- "Amelia"
-Amelia_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Aricia)
-BatID <- "Aricia"
-Aricia_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Daisy)
-BatID <- "Daisy"
-Daisy_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Ethel)
-BatID <- "Ethel"
-Ethel_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Ida)
-BatID <- "Ida"
-Ida_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Line)
-BatID <- "Line"
-Line_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Louise)
-BatID <- "Louise"
-Louise_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Marie)
-BatID <- "Marie"
-Marie_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Ragnhild)
-BatID <- "Ragnhild"
-Ragnhild_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Reeda)
-BatID <- "Reeda"
-Reeda_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Stine)
-BatID <- "Stine"
-Stine_area <- as.data.frame(cbind(area, BatID ))
-
-area <- area(range95Turid)
-BatID <- "Turid"
-Turid_area <- as.data.frame(cbind(area, BatID ))
-
-listarea <- list(Astrid_area, Dagny_area, Kaja_area, # M. brandtii 
-                 Maren_area, Nora_area, Phoebe_area, 
-                 Sofia_area, Steffi_area, Thea_area, 
-                 Amelia_area, Aricia_area, Daisy_area, # M. mystacinus
-                 Ethel_area, Ida_area, Line_area, 
-                 Louise_area, Marie_area, Ragnhild_area, 
-                 Reeda_area, Stine_area, Turid_area) #list of 21, good
-
-## The area column is in m2 - create another that is in km2 
-allarea <- listarea %>% reduce(full_join, by=c('BatID', 'area')) 
-allarea$area <- as.numeric(allarea$area)
-allarea$area_km <- round(allarea$area /1000000 ,2)
-
-allarea <- allarea %>% 
-  mutate(Species = case_when(
-    BatID %in% c("Amelia","Marie", "Turid", 
-                 "Reeda", "Daisy", "Line", 
-                 "Stine", "Ethel", "Ragnhild", 
-                 "Ida", "Louise", "Aricia") ~ "M. mystacinus", 
-    TRUE ~ "M. brandtii")) %>% 
-  mutate(Species = factor(Species)) %>% select(-area)
-
-allareaB <- allarea %>% filter(Species == "M. brandtii") %>% select(-Species) %>% droplevels()
-allareaM <- allarea %>% filter(Species == "M. mystacinus") %>% select(-Species) %>% droplevels()
-
-knitr::kable(allareaB) %>% kable_minimal() # Number of avail obs 
-knitr::kable(allareaM) %>% kable_minimal() # Number of avail obs 
-
-## MBRA
-# mean points for brandts bats
-mean(c(81,
-83,
-91,
-141,
-49,
-62,
-39,
-39,
-101))
-
-# mean total points for brandts bats 
-mean(c(891,
-913,
-1001,
-1551,
-539,
-682,
-429,
-429,
-1111))
-
-#mean home range in km2
-mean(c(7.59,
-1.94,
-0.11,
-1.60,
-5.23,
-12.74,
-4.05,
-1.90,
-0.83))
-
-## MMYS
-# mean points for mystacinus bats
-mean(c(16,
-90,
-134,
-117,
-119,
-55,
-64,
-31,
-28,
-70,
-84,
-8))
-
-# mean total points for mystacincus bats 
-mean(c(176,
-990,
-1474,
-1287,
-1309,
-605,
-704,
-341,
-308,
-770,
-924,
-88))
-
-#mean home range in km2
-mean(c(0.46,
-1.05,
-0.39,
-1.52,
-0.57,
-0.30,
-0.61,
-1.24,
-0.40,
-0.08,
-1.87,
-0.12))
-
-## Plot the home ranges for each bat individual but with species as different panels
-batcolors <- c("#32a5ff", "#011f4b")
-#                MBRA      MMYS
-
-### MBRA ### 
-Astrid_sf <- st_as_sf(Astrid)
-range95Astrid_sf<- st_as_sf(range95Astrid)
-
-Dagny_sf <- st_as_sf(Dagny)
-range95Dagny_sf <- st_as_sf(range95Dagny)
-
-Kaja_sf <- st_as_sf(Kaja)
-range95Kaja_sf <- st_as_sf(range95Kaja)
-
-Maren_sf <- st_as_sf(Maren)
-range95Maren_sf <- st_as_sf(range95Maren)
-
-Nora_sf <- st_as_sf(Nora)
-range95Nora_sf <- st_as_sf(range95Nora)
-
-Phoebe_sf <- st_as_sf(Phoebe)
-range95Phoebe_sf <- st_as_sf(range95Phoebe)
-
-Sofia_sf <- st_as_sf(Sofia)
-range95Sofia_sf <- st_as_sf(range95Sofia)
-
-Steffi_sf <- st_as_sf(Steffi)
-range95Steffi_sf <- st_as_sf(range95Steffi)
-
-Thea_sf <- st_as_sf(Thea)
-range95Thea_sf <- st_as_sf(range95Thea)
-
-## test zone
-
-#   tm_shape(Astrid_sf, bbox = bound_box) + 
-#   tmap_mode('view') +
-#   tm_basemap("CartoDB.Voyager") +
-#   tm_dots(fill = "#32a5ff") +
-# tm_shape(range95Astrid_sf) + 
-#   tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-#   tm_fill(fill_alpha=.1, fill = "#32a5ff") 
-
-#Brandts
-BrandtsHR<-
-  tm_shape(Astrid_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill = "#32a5ff") +
-tm_shape(range95Astrid_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
-  
-  tm_shape(Dagny_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill = "#32a5ff") +
-tm_shape(range95Dagny_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
-
-  tm_shape(Kaja_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Kaja_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-
-  tm_shape(Maren_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Maren_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Nora_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Nora_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Phoebe_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Phoebe_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-
-  tm_shape(Sofia_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Sofia_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Steffi_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Steffi_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Thea_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Thea_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
-
-
-BrandtsHR
-
-#Shoudl try and address this: 
-# Warning messages:
-# 1: The shape range95Amelia is invalid (after reprojection). See sf::st_is_valid 
-# 2: The shape range95Dagny is invalid (after reprojection). See sf::st_is_valid 
-# 3: The shape range95Kaja is invalid (after reprojection). See sf::st_is_valid 
-# 4: The shape range95Maren is invalid (after reprojection). See sf::st_is_valid 
-# 5: The shape range95Phoebe is invalid (after reprojection). See sf::st_is_valid 
-# 6: The shape range95Sofia is invalid (after reprojection). See sf::st_is_valid
-
-### MMYS ### 
-
-Amelia_sf <- st_as_sf(Amelia)
-range95Amelia_sf<- st_as_sf(range95Amelia)
-
-Aricia_sf <- st_as_sf(Aricia)
-range95Aricia_sf<- st_as_sf(range95Aricia)
-
-Daisy_sf <- st_as_sf(Daisy)
-range95Daisy_sf<- st_as_sf(range95Daisy)
-
-Ethel_sf <- st_as_sf(Ethel)
-range95Ethel_sf<- st_as_sf(range95Ethel)
-
-Ida_sf <- st_as_sf(Ida)
-range95Ida_sf<- st_as_sf(range95Ida)
-
-Line_sf <- st_as_sf(Line)
-range95Line_sf<- st_as_sf(range95Line)
-
-Louise_sf <- st_as_sf(Louise)
-range95Louise_sf<- st_as_sf(range95Louise)
-
-Marie_sf <- st_as_sf(Marie)
-range95Marie_sf<- st_as_sf(range95Marie)
-
-Ragnhild_sf <- st_as_sf(Ragnhild)
-range95Ragnhild_sf<- st_as_sf(range95Ragnhild)
-
-Reeda_sf <- st_as_sf(Reeda)
-range95Reeda_sf<- st_as_sf(range95Reeda)
-
-Stine_sf <- st_as_sf(Stine)
-range95Stine_sf<- st_as_sf(range95Stine)
-
-Turid_sf <- st_as_sf(Turid)
-range95Turid_sf<- st_as_sf(range95Turid)
-
-
-
-MystacinusHR <- 
-  tm_shape(Amelia_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Amelia_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-  
-  tm_shape(Aricia_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Aricia_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_shape(Daisy_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Daisy_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_shape(Ethel_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Ethel_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-  
-  tm_shape(Ida_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Ida_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-  
-  tm_shape(Line_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Line_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_shape(Line_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Line_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_shape(Marie_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Marie_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_shape(Ragnhild_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Ragnhild_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_shape(Reeda_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Reeda_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  
-  tm_shape(Stine_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Stine_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  
-  tm_shape(Turid_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "#011f4b", size = .3, fill_alpha = .8) +
-tm_shape(range95Turid_sf) + 
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#011f4b") +
-
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
-
-MystacinusHR 
-# 1: The shape range95Amelia is invalid (after reprojection). See sf::st_is_valid 
-# 2: The shape range95Ethel is invalid (after reprojection). See sf::st_is_valid 
-# 3: The shape range95Marie is invalid (after reprojection). See sf::st_is_valid 
-# 4: The shape range95Reeda is invalid (after reprojection). See sf::st_is_valid 
-# 5: The shape range95Stine is invalid (after reprojection). See sf::st_is_valid 
-# 6: The shape range95Turid is invalid (after reprojection). See sf::st_is_valid 
-
-tmap_arrange(BrandtsHR, MystacinusHR, ncol = 2, nrow = 1)
 
 ```
 
-# Different approach to figure 2 
+
+# Figure 2 
 With assistance from Sikt KI GPT-5.4 
 ```{r}
 Mystacinus_points <- rbind(
@@ -3022,6 +1639,7 @@ Mystacinus_points <- rbind(
   Ethel_sf,
   Ida_sf,
   Line_sf,
+  Louise_sf, 
   Marie_sf,
   Ragnhild_sf,
   Reeda_sf,
@@ -3036,6 +1654,7 @@ Mystacinus_ranges <- rbind(
   range95Ethel_sf,
   range95Ida_sf,
   range95Line_sf,
+  range95Louise_sf, 
   range95Marie_sf,
   range95Ragnhild_sf,
   range95Reeda_sf,
@@ -3246,296 +1865,116 @@ tmap_save(
   dpi = 600
 )
 
+#### Further exploration 
+#### Sattelite images and the three Brandtii that have the most influence on the RSF results 
 
-## Now sattelite
-
-CombinedHR <-
-  tm_shape(Mystacinus_ranges, bbox = common_bbox) +
-  tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
-  tm_fill(col = "#011f4b", alpha = 0.1) +
-  
-  tm_shape(Brandts_ranges) +
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
-  
-  tm_shape(Mystacinus_points) +
-  tm_dots(col = "#011f4b", size = 0.3, alpha = 0.8) +
-  
-  tm_shape(Brandts_points) +
-  tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
-  
-  tm_basemap("Esri.WorldImagery") +
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
-
-CombinedHR
-
-
-
-### Now look at the most influential bats 
-
-bigbats_points <- rbind(
-  Dagny_sf,
-  Maren_sf,
-  Thea_sf
-)
-
-
-bigbats_ranges <- rbind(
-  range95Dagny_sf,
-  range95Maren_sf,
-  range95Thea_sf
-
-)
-
-
-# transform all to same CRS
-bigbats_points <- st_transform(bigbats_points, st_crs(bigbats_ranges))
-bigbats_ranges <- st_transform(bigbats_ranges, st_crs(bigbats_ranges))
-
-
-# clean geometries
-bigbats_ranges <- st_make_valid(bigbats_ranges[!st_is_empty(bigbats_ranges), ])
-bigbats_points <- st_make_valid(bigbats_points[!st_is_empty(bigbats_points), ])
-
-  tm_shape(Mystacinus_ranges, bbox = common_bbox) +
-  tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) +
-  tm_fill(fill_alpha=.1, fill = "#011f4b") +
-  tm_shape(Mystacinus_points) +
-  tm_dots(fill = "#011f4b", size = 0.3, fill_alpha = 0.8) +
-  tm_basemap("CartoDB.Voyager") +
-  tm_scalebar(position = c("top", "right"), width = 100, text.size = 0.6)
-
-
-bigbatsHR <- 
-  tm_shape(bigbats_ranges, bbox = common_bbox) +
-  tm_borders(col = "salmon", lwd = 2, fill_alpha = 0.7) +
-  tm_fill(fill = "salmon", fill_alpha = 0.1) +
-  tm_shape(bigbats_points) +
-  tm_dots(fill = "salmon", size = 0.3, fill_alpha = 0.8) +
-  tm_basemap("Esri.WorldImagery") +
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
-
-tmap_mode("view")
-bigbatsHR
-
-tmap_save(
-  bigbatsHR,
-  filename = file.path(output_today, "bigbatsHR_Sattelite.tiff"),
-  width = 8,
-  height = 12,
-  units = "in",
-  dpi = 600
-)
-
-
-
-   tm_shape(Maren_sf, bbox = common_bbox) + 
-   tmap_mode('view') +
-   tm_basemap("CartoDB.Voyager") +
-   tm_dots(fill= "steelblue", size = .3, fill_alpha = .8) +
- tm_shape(range95Maren_sf) + 
-   tm_borders(fill_alpha=.7, col = "steelblue", lwd = 2) + 
-   tm_fill(fill_alpha=.1, fill= "steelblue") 
-     
-   
-   tm_shape(Thea_sf, bbox = common_bbox) + 
-   tmap_mode('view') +
-   tm_basemap("CartoDB.Voyager") +
-   tm_dots(fill= "darkgreen", size = .3, fill_alpha = .8) +
- tm_shape(range95Thea_sf) + 
-   tm_borders(fill_alpha=.7, col = "darkgreen", lwd = 2) + 
-   tm_fill(fill_alpha=.1, fill= "darkgreen") 
-   
-   tm_shape(Dagny_sf, bbox = common_bbox) + 
-   tmap_mode('view') +
-   tm_basemap("CartoDB.Voyager") +
-   tm_dots(fill= "tomato", size = .3, fill_alpha = .8) +
-   tm_shape(range95Dagny_sf) + 
-   tm_borders(fill_alpha=.7, col = "tomato", lwd = 2) + 
-   tm_fill(fill_alpha=.1, fill= "tomato")
+# ## Now sattelite
+# 
+# CombinedHR <-
+#   tm_shape(Mystacinus_ranges, bbox = common_bbox) +
+#   tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
+#   tm_fill(col = "#011f4b", alpha = 0.1) +
+#   
+#   tm_shape(Brandts_ranges) +
+#   tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+#   tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+#   
+#   tm_shape(Mystacinus_points) +
+#   tm_dots(col = "#011f4b", size = 0.3, alpha = 0.8) +
+#   
+#   tm_shape(Brandts_points) +
+#   tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
+#   
+#   tm_basemap("Esri.WorldImagery") +
+#   tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+# 
+# CombinedHR
+# 
+# 
+# 
+# ### Now look at the most influential bats 
+# 
+# bigbats_points <- rbind(
+#   Dagny_sf,
+#   Maren_sf,
+#   Thea_sf
+# )
+# 
+# 
+# bigbats_ranges <- rbind(
+#   range95Dagny_sf,
+#   range95Maren_sf,
+#   range95Thea_sf
+# 
+# )
+# 
+# 
+# # transform all to same CRS
+# bigbats_points <- st_transform(bigbats_points, st_crs(bigbats_ranges))
+# bigbats_ranges <- st_transform(bigbats_ranges, st_crs(bigbats_ranges))
+# 
+# 
+# # clean geometries
+# bigbats_ranges <- st_make_valid(bigbats_ranges[!st_is_empty(bigbats_ranges), ])
+# bigbats_points <- st_make_valid(bigbats_points[!st_is_empty(bigbats_points), ])
+# 
+#   tm_shape(Mystacinus_ranges, bbox = common_bbox) +
+#   tm_borders(fill_alpha=.7, col = "#011f4b", lwd = 2) +
+#   tm_fill(fill_alpha=.1, fill = "#011f4b") +
+#   tm_shape(Mystacinus_points) +
+#   tm_dots(fill = "#011f4b", size = 0.3, fill_alpha = 0.8) +
+#   tm_basemap("CartoDB.Voyager") +
+#   tm_scalebar(position = c("top", "right"), width = 100, text.size = 0.6)
+# 
+# 
+# bigbatsHR <- 
+#   tm_shape(bigbats_ranges, bbox = common_bbox) +
+#   tm_borders(col = "salmon", lwd = 2, fill_alpha = 0.7) +
+#   tm_fill(fill = "salmon", fill_alpha = 0.1) +
+#   tm_shape(bigbats_points) +
+#   tm_dots(fill = "salmon", size = 0.3, fill_alpha = 0.8) +
+#   tm_basemap("Esri.WorldImagery") +
+#   tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+# 
+# tmap_mode("view")
+# bigbatsHR
+# 
+# tmap_save(
+#   bigbatsHR,
+#   filename = file.path(output_today, "bigbatsHR_Sattelite.tiff"),
+#   width = 8,
+#   height = 12,
+#   units = "in",
+#   dpi = 600
+# )
+# 
+# 
+# 
+#    tm_shape(Maren_sf, bbox = common_bbox) + 
+#    tmap_mode('view') +
+#    tm_basemap("CartoDB.Voyager") +
+#    tm_dots(fill= "steelblue", size = .3, fill_alpha = .8) +
+#  tm_shape(range95Maren_sf) + 
+#    tm_borders(fill_alpha=.7, col = "steelblue", lwd = 2) + 
+#    tm_fill(fill_alpha=.1, fill= "steelblue") 
+#      
+#    
+#    tm_shape(Thea_sf, bbox = common_bbox) + 
+#    tmap_mode('view') +
+#    tm_basemap("CartoDB.Voyager") +
+#    tm_dots(fill= "darkgreen", size = .3, fill_alpha = .8) +
+#  tm_shape(range95Thea_sf) + 
+#    tm_borders(fill_alpha=.7, col = "darkgreen", lwd = 2) + 
+#    tm_fill(fill_alpha=.1, fill= "darkgreen") 
+#    
+#    tm_shape(Dagny_sf, bbox = common_bbox) + 
+#    tmap_mode('view') +
+#    tm_basemap("CartoDB.Voyager") +
+#    tm_dots(fill= "tomato", size = .3, fill_alpha = .8) +
+#    tm_shape(range95Dagny_sf) + 
+#    tm_borders(fill_alpha=.7, col = "tomato", lwd = 2) + 
+#    tm_fill(fill_alpha=.1, fill= "tomato")
 
 ```
 
-
-
-## Now more detailed exploration of the individual home ranges 
-## Use sattelite images
-```{r}
-BrandtsHR<-
-  tm_shape(Astrid_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill = "#32a5ff") +
-tm_shape(range95Astrid_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
-  
-  tm_shape(Dagny_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill = "#32a5ff") +
-tm_shape(range95Dagny_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill = "#32a5ff") +
-  
-
-  tm_shape(Kaja_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Kaja_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-
-  tm_shape(Maren_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Maren_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Nora_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Nora_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Phoebe_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Phoebe_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-
-  tm_shape(Sofia_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Sofia_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Steffi_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Steffi_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  
-  tm_shape(Thea_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "#32a5ff") +
-tm_shape(range95Thea_sf) + 
-  tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "#32a5ff") +
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
-
-
-BrandtsHR
-
-
-### MMYS ###
-
-
-MystacinusHR <- 
-  tm_shape(Amelia_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Amelia_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-  
-  tm_shape(Aricia_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Aricia_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  tm_shape(Daisy_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Daisy_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  tm_shape(Ethel_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Ethel_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-  
-  tm_shape(Ida_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Ida_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-  
-  tm_shape(Line_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Line_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  tm_shape(Marie_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Marie_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  tm_shape(Ragnhild_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Ragnhild_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  tm_shape(Reeda_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Reeda_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  
-  tm_shape(Stine_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("Esri.WorldImagery") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-tm_shape(range95Stine_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  
-  tm_shape(Turid_sf, bbox = bound_box) + 
-  tmap_mode('view') +
-  tm_basemap("CartoDB.Voyager") +
-  tm_dots(fill= "white", size = .3, fill_alpha = .8) +
-  tm_shape(range95Turid_sf) + 
-  tm_borders(fill_alpha=.7, col = "white", lwd = 2) + 
-  tm_fill(fill_alpha=.1, fill= "white") +
-
-  tm_scalebar(position = c("top", "right"), width = 200, text.size = 15) 
-
-  
-```
 
