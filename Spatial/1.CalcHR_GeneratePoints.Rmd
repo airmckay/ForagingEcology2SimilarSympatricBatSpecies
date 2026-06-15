@@ -1837,7 +1837,7 @@ tmap_save(
 tmap_mode("view")
 
 CombinedHR <-
-  tm_shape(Mystacinus_ranges, bbox = bound_box) +
+  tm_shape(Mystacinus_ranges, bbox = common_bbox) +
   tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
   tm_fill(col = "#011f4b", alpha = 0.1) +
   
@@ -1977,4 +1977,20 @@ tmap_save(
 
 ```
 
+
+## Export spatial objects for ease of import later    
+```{r}
+# str(Mystacinus_points)
+# output_today
+
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2026-06-15"
+
+### Also moved a copy to the Inputs/Spatial folder 
+
+# saveRDS(Mystacinus_points, file =file.path(output_today, "Mystacinus_points_sf.rds"))
+# saveRDS(Mystacinus_ranges, file =file.path(output_today, "Mystacinus_ranges_sf.rds"))
+# 
+# saveRDS(Brandts_points, file =file.path(output_today, "Brandts_points_sf.rds"))
+# saveRDS(Brandts_ranges, file =file.path(output_today, "Brandts_ranges_sf.rds"))
+```
 
