@@ -1,0 +1,784 @@
+---
+title: "Quality control and exploration"
+output: html_document
+date: "2026-06-15"
+---
+
+```{r}
+### Prepare the work space
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(beepr)
+library(lubridate)
+library(ResourceSelection)
+library(RColorBrewer)
+library(cowplot)
+library(colorBlindness)
+library(lme4)
+library(stats)
+library(DHARMa)
+library(lattice)
+library(broom)
+library(modelsummary)
+library(gt)
+library(readxl)
+library(xlsx)
+library(corrplot)
+library(vegan)
+library(mapview)
+library(sf)
+library(influence.ME)
+
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "QualityControlExploration"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/QualityControlExploration_2026-06-15"
+
+
+```
+
+
+
+```{r}
+## Import spatial data - the points and HR for all bats 
+
+Brandts_points <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/Brandts_points_sf.rds")
+# 686 of 4
+
+Brandts_ranges <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/Brandts_ranges_sf.rds")
+# 9 of 3
+
+Mystacinus_points <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/Mystacinus_points_sf.rds")
+# 816 of 4
+
+Mystacinus_ranges <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/Mystacinus_ranges_sf.rds")
+# 12 of 3
+
+## Quick visual inspection to make sure that worked 
+# shared extent across all layers
+# bb1 <- st_bbox(Brandts_ranges)
+# bb2 <- st_bbox(Brandts_points)
+# bb3 <- st_bbox(Mystacinus_ranges)
+# bb4 <- st_bbox(Mystacinus_points)
+# 
+# xmin <- min(bb1["xmin"], bb2["xmin"], bb3["xmin"], bb4["xmin"], na.rm = TRUE)
+# xmax <- max(bb1["xmax"], bb2["xmax"], bb3["xmax"], bb4["xmax"], na.rm = TRUE)
+# ymin <- min(bb1["ymin"], bb2["ymin"], bb3["ymin"], bb4["ymin"], na.rm = TRUE)
+# ymax <- max(bb1["ymax"], bb2["ymax"], bb3["ymax"], bb4["ymax"], na.rm = TRUE)
+# 
+# xpad <- (xmax - xmin) * 0.08
+# ypad <- (ymax - ymin) * 0.08
+# 
+# common_bbox <- st_bbox(c(
+#   xmin = xmin - xpad,
+#   xmax = xmax + xpad,
+#   ymin = ymin - ypad,
+#   ymax = ymax + ypad
+# ), crs = st_crs(Brandts_ranges))
+# 
+# 
+# CombinedHR <-
+#   tm_shape(Mystacinus_ranges, bbox = common_bbox) +
+#   tm_borders(col = "#011f4b", lwd = 2, alpha = 0.7) +
+#   tm_fill(col = "#011f4b", alpha = 0.1) +
+#   
+#   tm_shape(Brandts_ranges) +
+#   tm_borders(fill_alpha=.7, col = "#32a5ff", lwd = 2) + 
+#   tm_fill(fill_alpha=.1, fill = "#32a5ff") +
+#   
+#   tm_shape(Mystacinus_points) +
+#   tm_dots(col = "#011f4b", size = 0.3, alpha = 0.8) +
+#   
+#   tm_shape(Brandts_points) +
+#   tm_dots(col = "#32a5ff", size = 0.3, alpha = 0.8) +
+#   
+#   tm_basemap("CartoDB.Voyager") +
+#   tm_scalebar(position = c("top", "right"), width = 200, text.size = 1.5)
+# 
+# CombinedHR
+
+## looks good 
+
+```
+
+## Import RSF data, re-run best model and run quality control tests on the robustness of the model 
+```{r}
+
+## Covariates from LiDAR data prepared by Hans Ole 
+vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/231220_vars_dist50_v4_na-rm.rds")
+
+#Used and available positions - just for referencing. 
+rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
+      col_types = cols(...1 = col_skip()))
+
+rsf.data$BatID <- factor(rsf.data$BatID)
+used <- rsf.data %>% filter(used == 1) 
+
+summary(used$BatID)
+
+summary(vars)
+str(vars) # sf data frame
+# 16522 observations of 47 variables 
+
+names(vars)
+
+dt <- vars
+dt$BatID <- factor(dt$BatID) # 21 bats 
+dt1df<-st_drop_geometry(dt)
+dt1df$Species <- factor(dt1df$Species)
+dt1df <- as.data.frame(dt)
+dt1df <- dt1df %>% select(-geom)
+dim(dt1df)
+# 16522 obs of 50 vars
+
+levels(dt$BatID )
+
+## Fix error - Turid should be Mystacinus
+dtx <- dt1df %>% mutate(
+  UID = factor(case_when(
+  BatID == "Amelia" ~ "M01",
+  BatID == "Aricia" ~ "M11", 
+  BatID == "Astrid" ~ "B07", 
+  BatID == "Dagny" ~ "B09", 
+  BatID == "Daisy" ~ "M06", 
+  BatID == "Ethel" ~ "M08", 
+  BatID == "Ida" ~ "M10", 
+  BatID == "Kaja" ~ "B01", 
+  BatID == "Line" ~ "M05", 
+  BatID == "Louise" ~ "M12", 
+  BatID == "Maren" ~ "B05", 
+  BatID == "Marie" ~ "M02",
+  BatID == "Nora" ~ "B03", 
+  BatID == "Phoebe" ~ "B06", 
+  BatID == "Ragnhild" ~ "M09", 
+  BatID == "Reeda" ~ "M04", 
+  BatID == "Sofia" ~ "B04", 
+  BatID == "Steffi" ~ "B08", 
+  BatID == "Stine" ~ "M07", 
+  BatID == "Thea"  ~ "B02", 
+  BatID == "Turid" ~ "M03")),
+  species = factor(case_when(
+    BatID == "Turid" ~ "M.mystacinus", 
+    TRUE ~ Species
+  ))) %>% dplyr::select(-Species) %>% 
+  mutate(Species = species) %>% 
+  dplyr::select(-species)
+
+test <- dtx %>% dplyr::select(BatID, Species, UID) %>% distinct() %>% arrange(UID)
+
+test ## Fixed! 
+
+summary(dtx)
+
+table(dtx$BatID)
+#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+#      176      990      891      913     1474     1287     1309 
+#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+#     1001      605      704     1551      341      539      682 
+# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+#      308      770      429      429      924     1111       88
+
+ 
+ ## Fixed! 
+
+
+## There is an -Inf value for Hmax which can be corrrected like this: 
+dtx$Hmax <- gsub("-Inf", "0.5", dtx$Hmax)
+dtx$Hmax <- as.numeric(dtx$Hmax)
+summary(dtx)
+
+dt2df <- dtx 
+dim(dt2df)
+# 16522 obs of 50 vars
+
+# Scale all continuous numerical data 
+dt1 <- dt2df 
+dt1[,6:45]=scale(dt1[,6:45], scale=TRUE) #dt)
+
+dim(dt1)
+# 16522 obs of 51 vars 
+
+```
+
+## Run RSF
+```{r}
+bigfit2 =  glmer(used ~  Species + 
+                   gap3.mean.area + 
+                   D0 + Hsd + water.distance +
+                   Species*gap3.mean.area + 
+                   Species*D0 + 
+                   Species*Hsd + 
+                   (1|BatID), data=dt1,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(bigfit2)
+# Generalized linear mixed model fit by maximum likelihood (Adaptive Gauss-Hermite Quadrature, nAGQ = 0) ['glmerMod']
+#  Family: binomial  ( logit )
+# Formula: used ~ Species + gap3.mean.area + D0 + Hsd + water.distance +  
+#     Species * gap3.mean.area + Species * D0 + Species * Hsd +      (1 | BatID)
+#    Data: dt1
+# 
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    9563.3    9640.4   -4771.6    9543.3     16512 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.7635 -0.3560 -0.2783 -0.2008  7.8062 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.0187   0.1368  
+# Number of obs: 16522, groups:  BatID, 21
+# 
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -2.37265    0.06453 -36.768  < 2e-16 ***
+# SpeciesM.mystacinus                -0.19439    0.08878  -2.189   0.0286 *  
+# gap3.mean.area                     -0.62317    0.07155  -8.709  < 2e-16 ***
+# D0                                 -0.45490    0.07149  -6.364 1.97e-10 ***
+# Hsd                                 0.25243    0.04578   5.514 3.51e-08 ***
+# water.distance                     -0.51682    0.03585 -14.418  < 2e-16 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.43776    0.09973   4.390 1.14e-05 ***
+# SpeciesM.mystacinus:D0              0.61467    0.09615   6.393 1.63e-10 ***
+# SpeciesM.mystacinus:Hsd             0.14392    0.06491   2.217   0.0266 *  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) SpcsM. gp3.m. D0     Hsd    wtr.ds SM.:3. SM.:D0
+# SpcsM.mystc -0.709                                                 
+# gap3.mean.r  0.030 -0.003                                          
+# D0           0.100 -0.076  0.737                                   
+# Hsd         -0.157  0.138  0.231  0.074                            
+# water.dstnc  0.126  0.054  0.127 -0.022  0.167                     
+# SpcsM.m:3.. -0.019  0.084 -0.715 -0.529 -0.162 -0.070              
+# SpcsM.my:D0 -0.090  0.070 -0.563 -0.741 -0.075 -0.104  0.757       
+# SpcsM.mys:H  0.119 -0.204 -0.155 -0.054 -0.695 -0.053  0.227  0.122
+```
+
+
+## Further troubleshoot the model to test the robustness
+How much does a single individual influence the outcome of the model? 
+```{r}
+# =============================================================================
+#  COOK'S DISTANCE AND DFBETAS (influence.ME)
+# =============================================================================
+# This refits the model n times, dropping one individual per iteration.
+# Can be slow for large datasets; set parallel = TRUE if using a cluster.
+
+infl <- influence(bigfit2, group = "BatID")
+cd <- cooks.distance(infl)
+
+cd_df <- data.frame(
+  BatID = rownames(cd),
+  cooks_distance = as.numeric(cd)
+)
+
+cd_df
+
+#       BatID cooks_distance
+# 1    Amelia    0.087254669
+# 2    Aricia    0.466942487
+# 3    Astrid    0.278351495
+# 4     Dagny    0.645118904
+# 5     Daisy    0.302865800
+# 6     Ethel    0.644116758
+# 7       Ida    0.329554532
+# 8      Kaja    0.116871787
+# 9      Line    0.210178012
+# 10   Louise    0.518241172
+# 11    Maren    1.476387292
+# 12    Marie    0.173244284
+# 13     Nora    0.156122941
+# 14   Phoebe    0.179989711
+# 15 Ragnhild    0.121511521
+# 16    Reeda    0.311126351
+# 17    Sofia    0.213415269
+# 18   Steffi    0.151305957
+# 19    Stine    0.532828146
+# 20     Thea    4.550412472
+# 21    Turid    0.007731942
+
+               
+        summary(dt1)
+
+# --- Cook's distance ---
+cook_d <- cooks.distance(infl)
+cook_df <- data.frame(
+  individual_id = rownames(cook_d),
+  cooks_d       = as.numeric(cook_d),
+  species       = dt1 |>
+    distinct(BatID, Species) |>
+    arrange(BatID) |>
+    pull(Species)
+)
+
+cook_df
+
+
+# Threshold: common rule of thumb is 4/n (conservative) or visual inspection
+threshold_cook <- 4 / 21
+
+p_cook <- ggplot(cook_df, aes(x = reorder(individual_id, cooks_d),
+                               y = cooks_d, fill = species)) +
+  geom_col() +
+  geom_hline(yintercept = threshold_cook, linetype = "dashed", colour = "red") +
+  coord_flip() +
+  labs(
+    title = "Cook's distance by individual",
+    subtitle = paste0("Dashed line = 4/n threshold (", round(threshold_cook, 3), ")"),
+    x = NULL, y = "Cook's D"
+  ) +
+  theme_bw()
+
+
+print(p_cook)
+#ggsave("cooks_distance.png", p_cook, width = 7, height = 5, dpi = 300)
+
+
+temp <- dt1 %>% mutate(individual_id = BatID, 
+                       species = Species) 
+# --- DFBETAS ---
+dfb <- dfbetas(infl)
+dfb_df <- as.data.frame(dfb) |>
+  mutate(individual_id = rownames(dfb)) |>
+  pivot_longer(-individual_id, names_to = "coefficient", values_to = "dfbeta") |>
+  left_join(distinct(temp, individual_id, species), by = "individual_id")
+
+# DFBETAS threshold: |DFBETAS| > 2/sqrt(n)
+threshold_dfb <- 2 / sqrt(21)
+
+p_dfb <- ggplot(dfb_df, aes(x = reorder(individual_id, abs(dfbeta)),
+                              y = dfbeta, colour = species)) +
+  geom_point(size = 2) +
+  geom_hline(yintercept =  threshold_dfb, linetype = "dashed", colour = "red") +
+  geom_hline(yintercept = -threshold_dfb, linetype = "dashed", colour = "red") +
+  facet_wrap(~ coefficient, scales = "free_y") +
+  coord_flip() +
+  labs(
+    title = "DFBETAS by individual and coefficient",
+    subtitle = paste0("Dashed lines = ±2/√n threshold (±", round(threshold_dfb, 3), ")"),
+    x = NULL, y = "DFBETAS"
+  ) +
+  theme_bw(base_size = 9)
+
+print(p_dfb)
+#ggsave("dfbetas.png", p_dfb, width = 10, height = 7, dpi = 300)
+
+
+# =============================================================================
+#  LEAVE-ONE-OUT (LOO) JACKKNIFE BY INDIVIDUAL
+# =============================================================================
+# Refit model dropping one individual at a time; record fixed-effect estimates.
+
+# bigfit2 =  glmer(used ~  Species + 
+#                    gap3.mean.area + 
+#                    D0 + Hsd + water.distance +
+#                    Species*gap3.mean.area + 
+#                    Species*D0 + 
+#                    Species*Hsd + 
+#                    (1|BatID), data=dt1,
+#                family=binomial(link="logit"),nAGQ = 0)
+
+
+str(temp)
+dat <- temp
+
+individuals <- unique(dat$individual_id)
+
+loo_results <- lapply(individuals, function(id) {
+  dat_sub <- filter(dat, individual_id != id)
+  m_loo <- tryCatch(
+    glmer(
+      used ~ Species + gap3.mean.area + 
+                    D0 + Hsd + water.distance +
+                    Species*gap3.mean.area + 
+                    Species*D0 + 
+                    Species*Hsd + 
+             (1 | individual_id),
+      data   = dat_sub,
+      family = binomial(link = "logit"),
+      control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(m_loo)) return(NULL)
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_individual <- id
+  coef_df$dropped_species    <- dat |>
+    filter(individual_id == id) |>
+    pull(species) |>
+    unique()
+  coef_df
+}) |>
+  bind_rows()
+
+# Full-model estimates for reference line
+full_coefs <- data.frame(t(fixef(bigfit2)))
+full_coefs$dropped_individual <- "FULL MODEL"
+full_coefs$dropped_species    <- NA
+
+# Combine and reshape
+loo_long <- bind_rows(loo_results, full_coefs) |>
+  pivot_longer(
+    cols      = -c(dropped_individual, dropped_species),
+    names_to  = "coefficient",
+    values_to = "estimate"
+  )
+
+# Plot: one panel per coefficient, each point is the LOO estimate
+p_loo <- loo_long |>
+  filter(dropped_individual != "FULL MODEL") |>
+  ggplot(aes(x = reorder(dropped_individual, estimate),
+             y = estimate, colour = dropped_species)) +
+  geom_point(size = 2) +
+  geom_hline(
+    data = filter(loo_long, dropped_individual == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed", colour = "black"
+  ) +
+  facet_wrap(~ coefficient, scales = "free") +
+  coord_flip() +
+  labs(
+    title   = "LOO jackknife: fixed-effect estimates",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped individual", y = "Estimate (log-odds)",
+    colour = "Species"
+  ) +
+  theme_bw(base_size = 9)
+
+print(p_loo)
+# 1: Removed 84 rows containing missing values or values outside the scale range (`geom_point()`). 
+# 2: Removed 4 rows containing missing values or values outside the scale range (`geom_hline()`). 
+#ggsave("loo_jackknife.png", p_loo, width = 12, height = 8, dpi = 300)
+
+# Summary table: SD of LOO estimates per coefficient (instability measure)
+loo_stability <- loo_long |>
+  filter(dropped_individual != "FULL MODEL") |>
+  group_by(coefficient) |>
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) |>
+  left_join(
+    pivot_longer(full_coefs[1, ], -c(dropped_individual, dropped_species),
+                 names_to = "coefficient", values_to = "full_estimate"),
+    by = "coefficient"
+  ) 
+
+print(loo_stability)
+#write.csv(loo_stability, file.path(output_today, "loo_stability_table.csv"), row.names = FALSE)
+
+################################################################################
+######################### Separate for each species ############################
+################################################################################
+# A bit difficult to interpret when the two species are together - I will try again with separate models for each species
+
+mbra <- dt1 %>% dplyr::filter(Species == "M.brandtii") %>% droplevels()
+mmys <- dt1 %>% dplyr::filter(Species == "M.mystacinus") %>% droplevels()
+
+##############################################
+## MBRA ## 
+
+mbrafit =  glmer(used ~  
+                   gap3.mean.area +
+                   D0 + Hsd + water.distance +
+                   (1|BatID), data=mbra,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(mbrafit)
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    4344.3    4385.9   -2166.1    4332.3      7540 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.7425 -0.3564 -0.2698 -0.2009  7.5026 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.01044  0.1022  
+# Number of obs: 7546, groups:  BatID, 9
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.36362    0.05696 -41.495  < 2e-16 ***
+# gap3.mean.area -0.62611    0.07141  -8.768  < 2e-16 ***
+# D0             -0.45869    0.07141  -6.423 1.33e-10 ***
+# Hsd             0.25445    0.04609   5.520 3.39e-08 ***
+# water.distance -0.48900    0.04925  -9.930  < 2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. D0     Hsd   
+# gap3.mean.r  0.050                     
+# D0           0.112  0.733              
+# Hsd         -0.158  0.236  0.068       
+# water.dstnc  0.180  0.187 -0.029  0.234
+
+
+# LOO
+bats <- unique(mbra$BatID)
+
+# Leave-one-individual-out models
+loo_results <- lapply(bats, function(id) {
+  
+  mbra_sub <- mbra %>%
+    filter(BatID != id)
+  
+  m_loo <- tryCatch(
+    glmer(
+      used ~ gap3.mean.area + D0 + Hsd + water.distance + (1 | BatID),
+      data = mbra_sub,
+      family = binomial(link = "logit"),
+      nAGQ = 0
+    ),
+    error = function(e) NULL
+  )
+  
+  if (is.null(m_loo)) return(NULL)
+  
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_BatID <- id
+  coef_df
+}) %>%
+  bind_rows()
+
+
+# Add the full-model coefficients for comparison
+full_coefs <- as.data.frame(t(fixef(mbrafit)))
+full_coefs$dropped_BatID <- "FULL MODEL"
+
+# Reshape to long format
+loo_long <- bind_rows(loo_results, full_coefs) %>%
+  pivot_longer(
+    cols = -dropped_BatID,
+    names_to = "coefficient",
+    values_to = "estimate"
+  )
+
+# Plot the influence of dropping each individual
+p_loo <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  ggplot(aes(x = reorder(dropped_BatID, estimate), y = estimate)) +
+  geom_point(size = 2) +
+  geom_hline(
+    data = loo_long %>% filter(dropped_BatID == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed",
+    colour = "black"
+  ) +
+  facet_wrap(~ coefficient, scales = "free") +
+  coord_flip() +
+  labs(
+    title = "Leave-one-individual-out jackknife",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped BatID",
+    y = "Estimate (log-odds)"
+  ) +
+  theme_bw()
+
+print(p_loo)
+
+
+# Summary table of coefficient stability
+
+loo_stability <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  group_by(coefficient) %>%
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) %>%
+  left_join(
+    full_coefs %>%
+      pivot_longer(
+        cols = -dropped_BatID,
+        names_to = "coefficient",
+        values_to = "full_estimate"
+      ),
+    by = "coefficient"
+  )
+
+# print(loo_stability)
+#   coefficient    loo_mean loo_sd loo_min loo_max dropped_BatID full_estimate
+#   <chr>             <dbl>  <dbl>   <dbl>   <dbl> <chr>                 <dbl>
+# 1 (Intercept)      -2.38  0.107   -2.66   -2.31  FULL MODEL           -2.36 
+# 2 D0               -0.460 0.146   -0.720  -0.160 FULL MODEL           -0.459
+# 3 Hsd               0.253 0.0492   0.137   0.302 FULL MODEL            0.254
+# 4 gap3.mean.area   -0.628 0.135   -0.858  -0.411 FULL MODEL           -0.626
+# 5 water.distance   -0.506 0.196   -1.01   -0.369 FULL MODEL           -0.489
+
+
+# SIKT interpretation:
+
+# The leave-one-individual-out analysis indicates that fixed-effect estimates are generally robust to the removal of any single bat. The direction of all effects remained unchanged across LOO runs, suggesting qualitative inference is stable. Among predictors, water.distance showed the greatest sensitivity to individual removal, whereas Hsd and the intercept were most stable.
+
+
+### MMYS ###
+
+##############################################
+## MBRA ## 
+
+mmysfit =  glmer(used ~  
+                   gap3.mean.area +
+                   D0 + Hsd + water.distance +
+                   (1|BatID), data=mmys,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(mmysfit)
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    5222.2    5264.8   -2605.1    5210.2      8970 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.6429 -0.3573 -0.2834 -0.2012  7.7331 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.02626  0.1621  
+# Number of obs: 8976, groups:  BatID, 12
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.57399    0.06957 -37.000   <2e-16 ***
+# gap3.mean.area -0.18833    0.06983  -2.697   0.0070 ** 
+# D0              0.17088    0.06580   2.597   0.0094 ** 
+# Hsd             0.39581    0.04697   8.428   <2e-16 ***
+# water.distance -0.54126    0.05174 -10.462   <2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. D0     Hsd   
+# gap3.mean.r  0.160                     
+# D0          -0.031  0.730              
+# Hsd         -0.159  0.235  0.122       
+# water.dstnc  0.273  0.043 -0.253  0.126
+
+
+# LOO
+bats <- unique(mmys$BatID)
+
+# Leave-one-individual-out models
+loo_results <- lapply(bats, function(id) {
+  
+  mmys_sub <- mmys %>%
+    filter(BatID != id)
+  
+  m_loo <- tryCatch(
+    glmer(
+      used ~ gap3.mean.area + D0 + Hsd + water.distance + (1 | BatID),
+      data = mmys_sub,
+      family = binomial(link = "logit"),
+      nAGQ = 0
+    ),
+    error = function(e) NULL
+  )
+  
+  if (is.null(m_loo)) return(NULL)
+  
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_BatID <- id
+  coef_df
+}) %>%
+  bind_rows()
+
+
+# Add the full-model coefficients for comparison
+full_coefs <- as.data.frame(t(fixef(mmysfit)))
+full_coefs$dropped_BatID <- "FULL MODEL"
+
+# Reshape to long format
+loo_long <- bind_rows(loo_results, full_coefs) %>%
+  pivot_longer(
+    cols = -dropped_BatID,
+    names_to = "coefficient",
+    values_to = "estimate"
+  )
+
+# Plot the influence of dropping each individual
+p_loo <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  ggplot(aes(x = reorder(dropped_BatID, estimate), y = estimate)) +
+  geom_point(size = 2) +
+  geom_hline(
+    data = loo_long %>% filter(dropped_BatID == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed",
+    colour = "black"
+  ) +
+  facet_wrap(~ coefficient, scales = "free") +
+  coord_flip() +
+  labs(
+    title = "Leave-one-individual-out jackknife",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped BatID",
+    y = "Estimate (log-odds)"
+  ) +
+  theme_bw()
+
+print(p_loo)
+
+
+# Summary table of coefficient stability
+
+loo_stability <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  group_by(coefficient) %>%
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) %>%
+  left_join(
+    full_coefs %>%
+      pivot_longer(
+        cols = -dropped_BatID,
+        names_to = "coefficient",
+        values_to = "full_estimate"
+      ),
+    by = "coefficient"
+  )
+
+ print(loo_stability)
+#   coefficient    loo_mean loo_sd loo_min loo_max dropped_BatID full_estimate
+#   <chr>             <dbl>  <dbl>   <dbl>   <dbl> <chr>                 <dbl>
+# 1 (Intercept)      -2.58  0.0410 -2.64   -2.51   FULL MODEL           -2.57 
+# 2 D0                0.172 0.0636  0.0637  0.276  FULL MODEL            0.171
+# 3 Hsd               0.395 0.0398  0.331   0.458  FULL MODEL            0.396
+# 4 gap3.mean.area   -0.189 0.0746 -0.328  -0.0970 FULL MODEL           -0.188
+# 5 water.distance   -0.544 0.0565 -0.675  -0.478  FULL MODEL           -0.541
+
+
+# SIKT interpretation:
+
+# The leave-one-individual-out analysis indicates that the model is highly robust to the removal of any single bat. For all predictors, the LOO means were nearly identical to the full-model estimates, and the sign of each coefficient was unchanged across all iterations. Among the covariates, gap3.mean.area and D0 showed somewhat greater variation than the other terms, but overall the model appears very stable.
+
+
+```
+
