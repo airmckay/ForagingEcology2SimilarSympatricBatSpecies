@@ -29,7 +29,7 @@ library(vegan)
 library(mapview)
 library(sf)
 library(influence.ME)
-
+library(raster)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -212,7 +212,7 @@ dt1 <- dt2df
 dt1[,6:45]=scale(dt1[,6:45], scale=TRUE) #dt)
 
 dim(dt1)
-# 16522 obs of 51 vars 
+# 16522 obs of 50 vars 
 
 ```
 
@@ -779,6 +779,376 @@ loo_stability <- loo_long %>%
 
 # The leave-one-individual-out analysis indicates that the model is highly robust to the removal of any single bat. For all predictors, the LOO means were nearly identical to the full-model estimates, and the sign of each coefficient was unchanged across all iterations. Among the covariates, gap3.mean.area and D0 showed somewhat greater variation than the other terms, but overall the model appears very stable.
 
+ 
+ 
+```
 
+
+```{r}
+
+############# Sensitivity checks ####################
+
+### Home range size first 
+
+Brandts_ranges$species <- "M.brandtii"
+Mystacinus_ranges$species <- "M.mystacinus"
+
+BHR <- rbind(Brandts_ranges, Mystacinus_ranges)
+#21 of 3 - sweet 
+
+
+temp <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/BatsMeta.xlsx")
+
+names(temp)
+
+effort <- temp %>% 
+  dplyr::select(BatID, HRha, Fixes, DaysTracked, Species) %>% 
+  rename(n_nights = DaysTracked,
+         n_positions = Fixes, 
+         area = HRha,
+         species = Species) %>% 
+  mutate(BatID = factor(BatID),
+         species = factor(species)) %>% 
+  dplyr::filter(BatID != "Cecilia") %>% 
+  droplevels()
+
+summary(effort)
+
+temp <- effort %>% dplyr::select(BatID, area, n_nights, n_positions)
+
+### Now include the HR size and n points as columns to the larger RSF dataset 
+dt2 <- left_join(dt1, temp)
+summary(dt2)
+# Looking good!! 
+
+## Now the effort dataset - with the number of nights and the number of points for each individuals 
+
+stest <- lm(log(area) ~ species + log(n_positions) + log(n_nights), data = effort)
+summary(stest)
+
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.77717 -0.57034 -0.06847  0.62102  1.85620 
+# 
+# Coefficients:
+#                     Estimate Std. Error t value Pr(>|t|)  
+# (Intercept)           4.0255     1.6737   2.405   0.0278 *
+# speciesM.mystacinus  -1.1020     0.5712  -1.929   0.0706 .
+# log(n_positions)     -0.3020     0.5020  -0.602   0.5554  
+# log(n_nights)         1.2907     0.9302   1.388   0.1832  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 1.165 on 17 degrees of freedom
+# Multiple R-squared:  0.3766,	Adjusted R-squared:  0.2665 
+# F-statistic: 3.423 on 3 and 17 DF,  p-value: 0.04105
+
+## Alternative 
+
+stest1 <- lm(log(area) ~ species * log(n_positions) + species * log(n_nights), data = effort)
+
+summary(stest1)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.45104 -0.39529 -0.07701  0.46841  1.82507 
+# 
+# Coefficients:
+#                                      Estimate Std. Error t value Pr(>|t|)  
+# (Intercept)                            8.8811     4.8998   1.813    0.090 .
+# speciesM.mystacinus                   -6.7849     5.1603  -1.315    0.208  
+# log(n_positions)                      -1.5001     0.9885  -1.517    0.150  
+# log(n_nights)                          1.4053     2.1171   0.664    0.517  
+# speciesM.mystacinus:log(n_positions)   1.5835     1.1507   1.376    0.189  
+# speciesM.mystacinus:log(n_nights)     -0.5245     2.3707  -0.221    0.828  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 1.163 on 15 degrees of freedom
+# Multiple R-squared:  0.4521,	Adjusted R-squared:  0.2694 
+# F-statistic: 2.475 on 5 and 15 DF,  p-value: 0.07961
+
+## Higher R value for tht second model and I think that the structure of the model is more ecologically meaningful - with interactions between species and each effor metric. 
+
+## Interpreation - basically, seems to be very little influence overall. 
+
+## Check for collinearity 
+
+cor(effort$n_positions, effort$n_nights)
+# 0.6568861 
+# That is pretty high ... so I will fit separate models for each effort metric 
+
+stest2 <- lm(log(area) ~ species * log(n_positions), data = effort)
+
+summary(stest2)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.65112 -0.54310  0.09984  0.58401  1.61207 
+# 
+# Coefficients:
+#                                      Estimate Std. Error t value Pr(>|t|)  
+# (Intercept)                           10.7955     3.8575   2.799   0.0123 *
+# speciesM.mystacinus                   -8.6159     4.1660  -2.068   0.0542 .
+# log(n_positions)                      -1.2739     0.9037  -1.410   0.1767  
+# speciesM.mystacinus:log(n_positions)   1.7143     0.9841   1.742   0.0996 .
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 1.132 on 17 degrees of freedom
+# Multiple R-squared:  0.4111,	Adjusted R-squared:  0.3071 
+# F-statistic: 3.955 on 3 and 17 DF,  p-value: 0.02617
+
+stest3 <- lm(log(area) ~ species * log(n_nights), data = effort)
+summary(stest3)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.95586 -0.43259 -0.06082  0.61036  1.75639 
+# 
+# Coefficients:
+#                                   Estimate Std. Error t value Pr(>|t|)
+# (Intercept)                         4.7741     4.1232   1.158    0.263
+# speciesM.mystacinus                -2.5364     4.3189  -0.587    0.565
+# log(n_nights)                       0.2979     2.0061   0.148    0.884
+# speciesM.mystacinus:log(n_nights)   0.6938     2.1353   0.325    0.749
+# 
+# Residual standard error: 1.174 on 17 degrees of freedom
+# Multiple R-squared:  0.3672,	Adjusted R-squared:  0.2556 
+# F-statistic: 3.289 on 3 and 17 DF,  p-value: 0.04613
+
+## Still a low influence for both metrics! '
+
+### Now visualize
+
+ggplot(effort, aes(n_positions, area, color = species)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  xlab("Number of positions") + 
+  ylab("Homerange area (hectares)")+ 
+  ggtitle("Influence of the number of positions on size of home range") +
+  theme_bw()
+
+ggplot(effort, aes(n_nights, area, color = species)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  xlab("Number of nights tracked") + 
+  ylab("Homerange area (hectares)")+ 
+  ggtitle("Influence of the number of nights tracked on size of home range") +
+  theme_bw()
+
+### Interpretation
+
+### More influence on MBRA than on MMYS for both metrics however - this a very wide spread 
+
+
+### Suggested phrasing from Sikt: 
+# We evaluated whether home-range area estimates were sensitive to tracking effort by modeling estimated area as a function of number of locations and number of nights tracked, including species as a covariate. 
+
+# =============================================================================
+#   EFFORT SENSITIVITY CHECK
+# =============================================================================
+# Test whether tracking effort (n_nights, n_positions) correlates with
+# habitat diversity or RSF coefficients, and whether including it as a
+# covariate changes species-level conclusions.
+
+# --- Correlation: home range size (proxy: n locations) vs habitat diversity ---
+# Replace shannon_H with your actual per-individual diversity measure
+
+## Run for each of the main habitat types 
+dat <- dt2 %>% mutate(individual_id = BatID,
+                      species = Species)
+
+########################## D0 #########################################
+effort_D0 <- dat |>
+  group_by(individual_id, species) |>
+  summarise(
+    n_used     = sum(used),
+    n_nights   = first(n_nights),
+    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
+    shannon_H  = {
+      props <- table(cut(D0[used == 1], breaks = 5)) / sum(used)
+      props <- props[props > 0]
+      -sum(props * log(props))
+    },
+    .groups = "drop"
+  )
+
+p_effort <- ggplot(effort_D0,
+                    aes(x = n_nights, y = shannon_H, colour = species)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Tracking effort vs D0 habitat diversity by individual",
+    x     = "Number of nights tracked",
+    y     = "Shannon H (habitat diversity)"
+  ) +
+  theme_bw()
+
+print(p_effort)
+ggsave(file = file.path(output_today,"effort_vs_diversity_D0.png"), p_effort, width = 6, height = 4, dpi = 300)
+
+# Formal test per species
+effort_D0 |>
+  group_by(species) |>
+  summarise(
+    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
+    cor_p = cor.test(n_nights, shannon_H)$p.value,
+    .groups = "drop"
+  ) |>
+  print()
+
+########################## HSD #########################################
+effort_Hsd <- dat |>
+  group_by(individual_id, species) |>
+  summarise(
+    n_used     = sum(used),
+    n_nights   = first(n_nights),
+    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
+    shannon_H  = {
+      props <- table(cut(Hsd[used == 1], breaks = 5)) / sum(used)
+      props <- props[props > 0]
+      -sum(props * log(props))
+    },
+    .groups = "drop"
+  )
+
+p_effort <- ggplot(effort_Hsd,
+                    aes(x = n_nights, y = shannon_H, colour = species)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Tracking effort vs Hsd habitat diversity by individual",
+    x     = "Number of nights tracked",
+    y     = "Shannon H (habitat diversity)"
+  ) +
+  theme_bw()
+
+print(p_effort)
+ggsave(file = file.path(output_today,"effort_vs_diversity_Hsd.png"), p_effort, width = 6, height = 4, dpi = 300)
+
+# Formal test per species
+effort_Hsd |>
+  group_by(species) |>
+  summarise(
+    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
+    cor_p = cor.test(n_nights, shannon_H)$p.value,
+    .groups = "drop"
+  ) |>
+  print()
+
+########################## gap3.mean.area #########################################
+effort_gap <- dat |>
+  group_by(individual_id, species) |>
+  summarise(
+    n_used     = sum(used),
+    n_nights   = first(n_nights),
+    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
+    shannon_H  = {
+      props <- table(cut(gap3.mean.area[used == 1], breaks = 5)) / sum(used)
+      props <- props[props > 0]
+      -sum(props * log(props))
+    },
+    .groups = "drop"
+  )
+
+p_effort <- ggplot(effort_gap,
+                    aes(x = n_nights, y = shannon_H, colour = species)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Tracking effort vs gap3.mean.area habitat diversity by individual",
+    x     = "Number of nights tracked",
+    y     = "Shannon H (habitat diversity)"
+  ) +
+  theme_bw()
+
+print(p_effort)
+ggsave(file = file.path(output_today,"effort_vs_diversity_gap3.mean.area.png"), p_effort, width = 6, height = 4, dpi = 300)
+
+effort_gap |>
+  group_by(species) |>
+  summarise(
+    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
+    cor_p = cor.test(n_nights, shannon_H)$p.value,
+    .groups = "drop"
+  ) |>
+  print()
+
+
+########################## water.distance #########################################
+effort_water <- dat |>
+  group_by(individual_id, species) |>
+  summarise(
+    n_used     = sum(used),
+    n_nights   = first(n_nights),
+    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
+    shannon_H  = {
+      props <- table(cut(water.distance[used == 1], breaks = 5)) / sum(used)
+      props <- props[props > 0]
+      -sum(props * log(props))
+    },
+    .groups = "drop"
+  )
+
+p_effort <- ggplot(effort_water,
+                    aes(x = n_nights, y = shannon_H, colour = species)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Tracking effort vs water.distance habitat diversity by individual",
+    x     = "Number of nights tracked",
+    y     = "Shannon H (habitat diversity)"
+  ) +
+  theme_bw()
+
+print(p_effort)
+ggsave(file = file.path(output_today,"effort_vs_diversity_water.distance.png"), p_effort, width = 6, height = 4, dpi = 300)
+
+effort_water |>
+  group_by(species) |>
+  summarise(
+    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
+    cor_p = cor.test(n_nights, shannon_H)$p.value,
+    .groups = "drop"
+  ) |>
+  print()
+
+################################################################################
+# Formal test per species
+effort_gap |>
+  group_by(species) |>
+  summarise(
+    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
+    cor_p = cor.test(n_nights, shannon_H)$p.value,
+    .groups = "drop"
+  ) |>
+  print()
+
+# --- Sensitivity model with effort covariate ---
+m_effort <- glmer(
+ used ~  Species +  gap3.mean.area + 
+   D0 + Hsd + water.distance +
+   Species*gap3.mean.area + 
+   Species*Hsd + 
+   n_nights + 
+  (1|BatID), data=dt2,
+ family=binomial(link="logit"),nAGQ = 0,
+  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+)
+
+# Compare key coefficients between base and effort-adjusted model
+coef_compare <- data.frame(
+  coefficient = names(fixef(bigfit2)),
+  full_model  = fixef(bigfit2),
+  effort_model = fixef(m_effort)[names(fixef(bigfit2))]
+)
+print(coef_compare)
+# (Intercept)                                               (Intercept) -2.3726510  -2.36257872
+# SpeciesM.mystacinus                               SpeciesM.mystacinus -0.1943861  -0.22608964
+# gap3.mean.area                                         gap3.mean.area -0.6231665  -0.36312096 *** .3 difference
+# D0                                                                 D0 -0.4548980  -0.12822280 *** .3 difference
+# Hsd                                                               Hsd  0.2524302   0.27451972
+# water.distance                                         water.distance -0.5168179  -0.48966117
+# SpeciesM.mystacinus:gap3.mean.area SpeciesM.mystacinus:gap3.mean.area  0.4377611  -0.04761241 *** .4 difference
+# SpeciesM.mystacinus:D0                         SpeciesM.mystacinus:D0  0.6146687           NA *** NA?
+# SpeciesM.mystacinus:Hsd                       SpeciesM.mystacinus:Hsd  0.1439242   0.09295824
 ```
 
