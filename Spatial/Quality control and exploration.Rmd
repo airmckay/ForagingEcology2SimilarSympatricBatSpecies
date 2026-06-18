@@ -270,6 +270,152 @@ summary(bigfit2)
 # SpcsM.m:3.. -0.019  0.084 -0.715 -0.529 -0.162 -0.070              
 # SpcsM.my:D0 -0.090  0.070 -0.563 -0.741 -0.075 -0.104  0.757       
 # SpcsM.mys:H  0.119 -0.204 -0.155 -0.054 -0.695 -0.053  0.227  0.122
+
+library(performance)
+
+r2_nakagawa(bigfit2)
+  # Conditional R2: 0.134
+  #    Marginal R2: 0.129
+```
+
+
+## Now re-run the RSF with a random slope instead of a random intercept for Bat ID
+```{r}
+
+# Try random slope with D0 
+bigfit_d0<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 + D0 | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+
+# Try random slope with the gap variable 
+bigfit_gap<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  gap3.mean.area | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+
+# Try random slope with the distance to water variable
+bigfit_H20<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  water.distance | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+
+
+BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
+#            df      BIC
+# bigfit2    10 9640.403
+# bigfit_d0  12 9605.394
+# bigfit_gap 12 9566.140
+# bigfit_H20 12 9297.663
+
+## Lower BIC = better (context still matters) 
+
+bic_tab <- BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
+bic_tab$delta_BIC <- bic_tab$BIC - min(bic_tab$BIC)
+bic_tab[order(bic_tab$BIC), ]
+
+#            df      BIC delta_BIC
+# bigfit_H20 12 9297.663    0.0000
+# bigfit_gap 12 9566.140  268.4768
+# bigfit_d0  12 9605.394  307.7309
+# bigfit2    10 9640.403  342.7401
+
+# Common rough guidelines:
+# 
+# 0–2: little difference in support
+# 2–6: some evidence against the larger-BIC model
+# 6–10: strong evidence against it
+# >10: very strong evidence against it
+# So usually you choose the model with the lowest BIC, then interpret how much worse the others are via ΔBIC.
+
+## Compare H20 model with OG big fit
+
+anova(bigfit2, bigfit_H20, test = "Chisq")
+#            npar    AIC    BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    
+# bigfit2      10 9563.3 9640.4 -4771.6    9543.3                         
+# bigfit_H20   12 9205.1 9297.7 -4590.6    9181.1 362.17  2  < 2.2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## Treating distance to water as a random slope has a significant improvement on the model 
+# 
+# 
+# Compared with bigfit2, the model bigfit_H20 had substantially lower BIC (9297.7 vs. 9640.4) and provided a significantly better fit to the data (likelihood ratio test: χ² = 362.17, df = 2, p < 2.2 × 10⁻¹⁶). Thus, bigfit_H20 was strongly supported over bigfit2.
+```
+
+
+
+## Testing individual variation's influnece on RSF results (bigfit2) and home range sizes. 
+```{r}
+# =============================================================================
+#  AMONG-INDIVIDUAL VARIANCE BY SPECIES
+# =============================================================================
+dat <- dt1 %>% mutate(individual_id = BatID, 
+                       species = Species) 
+
+# Fit separate models per species to compare random-effect (among-individual)
+# variance in habitat use.
+
+species_list <- levels(dat$species)
+
+var_by_species <- lapply(species_list, function(sp) {
+  m_sp <- glmer(
+    used ~  gap3.mean.area + D0 + Hsd + water.distance + (1 | individual_id),
+    data   = filter(dat, species == sp),
+    family = binomial(link = "logit"),
+    control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+  )
+  vc <- as.data.frame(VarCorr(m_sp))
+  data.frame(
+    species          = sp,
+    re_variance      = vc$vcov[vc$grp == "individual_id"],
+    re_sd            = vc$sdcor[vc$grp == "individual_id"]
+  )
+}) |> bind_rows()
+
+
+# 
+print(var_by_species)
+## Random effect variance 
+#        species re_variance     re_sd
+# 1   M.brandtii  0.01044946 0.1022226
+# 2 M.mystacinus  0.02627398 0.1620925
+
+## the random-effect variance appears somewhat larger for M.mystacinus, but both species show relatively low random-effect variability overall.
+
+# Higher RE variance = more among-individual variation in habitat use.
+# If M. mystacinus RE variance is LOW, this supports the species-level
+# strategy interpretation (all individuals behave similarly) rather than
+# individual specialisation.
+  
+  
+
+
+
 ```
 
 
