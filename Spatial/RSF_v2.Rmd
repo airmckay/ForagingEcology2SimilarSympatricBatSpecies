@@ -1,0 +1,649 @@
+---
+title: "RSF_v2"
+output: html_document
+date: "2026-06-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+### Prepare the work space
+# citation()
+#install.packages(c("DHARMa", "lme4", "Matrix", "Rcpp", "RcppEigen"))
+
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(beepr)
+library(lubridate)
+library(Resourcedplyr::selection)
+library(RColorBrewer)
+library(cowplot)
+library(colorBlindness)
+library(lme4)
+library(stats)
+library(DHARMa)
+library(lattice)
+library(broom)
+library(modelsummary)
+library(gt)
+library(readxl)
+library(xlsx)
+library(corrplot)
+library(vegan)
+library(mapview)
+library(sf)
+library(influence.ME)
+library(stringr)
+library(readr)
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "RSV_V2"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSV_V2_2026-06-18"
+
+
+```
+
+## Import and clean the input dataset 
+```{r}
+## Covariates from LiDAR data prepared by Hans Ole 
+vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/231220_vars_dist50_v4_na-rm.rds")
+
+#Used and available positions - just for referencing. 
+rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
+      col_types = cols(...1 = col_skip()))
+
+rsf.data$BatID <- factor(rsf.data$BatID)
+used <- rsf.data %>% dplyr::filter(used == 1) 
+
+summary(used$BatID)
+
+summary(vars)
+str(vars) # sf data frame
+# 16522 observations of 47 variables 
+
+names(vars)
+dt <- vars
+dt$BatID <- factor(dt$BatID) # 21 bats 
+dt1df<-st_drop_geometry(dt)
+dt1df$Species <- factor(dt1df$Species)
+dt1df <- as.data.frame(dt)
+dt1df <- dt1df %>% dplyr::select(-geom)
+# 16522 obs of 49 vars
+
+levels(dt$BatID )
+
+### FIX THIS HERE! Turid is somehow in the wrong category... also double check how the points are distributed between the two taxa!! 
+
+## Inset bat UID and fix species error for Turid
+
+dtx <- dt1df %>% dplyr::mutate(
+  UID = factor(dplyr::case_when(
+  BatID == "Amelia" ~ "M01",
+  BatID == "Aricia" ~ "M11", 
+  BatID == "Astrid" ~ "B07", 
+  BatID == "Dagny" ~ "B09", 
+  BatID == "Daisy" ~ "M06", 
+  BatID == "Ethel" ~ "M08", 
+  BatID == "Ida" ~ "M10", 
+  BatID == "Kaja" ~ "B01", 
+  BatID == "Line" ~ "M05", 
+  BatID == "Louise" ~ "M12", 
+  BatID == "Maren" ~ "B05", 
+  BatID == "Marie" ~ "M02",
+  BatID == "Nora" ~ "B03", 
+  BatID == "Phoebe" ~ "B06", 
+  BatID == "Ragnhild" ~ "M09", 
+  BatID == "Reeda" ~ "M04", 
+  BatID == "Sofia" ~ "B04", 
+  BatID == "Steffi" ~ "B08", 
+  BatID == "Stine" ~ "M07", 
+  BatID == "Thea"  ~ "B02", 
+  BatID == "Turid" ~ "M03")),
+  species = factor(dplyr::case_when(
+    BatID == "Turid" ~ "M.mystacinus", 
+    TRUE ~ Species
+  ))) %>% dplyr::select(-Species) %>% 
+  dplyr::mutate(Species = species) %>% 
+  dplyr::select(-species)
+
+test <- dtx %>% dplyr::select(BatID, Species, UID) %>% dplyr::distinct() %>% dplyr::arrange(UID)
+
+test ## Fixed! 
+
+summary(dtx)
+
+table(dtx$BatID)
+#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+#      176      990      891      913     1474     1287     1309 
+#     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+#     1001      605      704     1551      341      539      682 
+# Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+#      308      770      429      429      924     1111       88
+
+ 
+ ## Fixed! 
+
+
+## There is an -Inf value for Hmax which can be corrrected like this: 
+dtx$Hmax <- gsub("-Inf", "0.5", dtx$Hmax)
+dtx$Hmax <- as.numeric(dtx$Hmax)
+summary(dtx)
+
+dt2df <- dtx 
+dim(dt2df)
+# 16522 obs of 50 vars
+
+# Scale all continuous numerical data 
+dt1 <- dt2df 
+dt1[,6:45]=scale(dt1[,6:45], scale=TRUE) #dt)
+
+dim(dt1)
+# 16522 obs of 50 vars 
+
+### Define non-forest areas in the dataset 
+# How does this look for used points? 
+# dt2dfused <- dt2df %>% filter(used == 1)
+# hist(dt2dfused$ttops.n) 
+# 
+# hist(dt2dfused$D0)
+# 
+# table(dt1df$BatID)
+
+
+# ## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
+# openareas <- dt2dfused %>% dplyr::filter(H95 < 5 & D0 < 0.1)
+# summary(openareas)
+# dim(openareas)
+# # 22 obs 
+# 22/1502
+# # 0.014
+# 0.014 *100
+# 
+# table(openareas$Species)
+#   # M.brandtii M.mystacinus 
+#   #         15            7 
+# 
+# table(openareas$BatID)
+# #   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+# #        2        0        0        1        0        2        0 
+# #     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+# #        0        0        0        1        0        0        5 
+# # Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+# #        0        1        0        7        2        1        0
+# 
+# ggplot(dt2dfused, aes(x = H95, y = D0)) + 
+#   geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
+#   facet_wrap(~Species)
+# 
+# ## WHat is the proportion of non forest areas for random pointS? 
+# random <- dt2df %>% filter(used == 0)
+# 
+# ## Define non-forest as those with H95 < 5 and D0 less than 10 for used locations
+# openareas <- random %>% dplyr::filter(H95 < 5 & D0 < 0.1)
+# summary(openareas)
+# dim(openareas)
+# # 1677 obs 
+# 1677/15020
+# # 11%
+# 
+# table(openareas$Species)
+#   # M.brandtii        M.mystacinus 
+#   #          1016             661 
+# 
+# table(openareas$BatID)
+# #   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida 
+# #       29      101       87      173       84      111        8 
+# #     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe 
+# #       78       36       77      243       32       54       84 
+# # Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+# #       26       10       27       67      147      203        0 
+# 
+# ggplot(random, aes(x = H95, y = D0)) + 
+#   geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
+#   facet_wrap(~Species)
+```
+
+```{r}
+
+bigfit_H20<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  water.distance | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+
+summary(bigfit_H20)
+# 
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    9205.1    9297.7   -4590.6    9181.1     16510 
+# 
+# Scaled residuals: 
+#    Min     1Q Median     3Q    Max 
+# -1.063 -0.357 -0.257 -0.163 39.711 
+# 
+# Random effects:
+#  Groups Name           Variance Std.Dev. Corr 
+#  BatID  (Intercept)    0.1281   0.3579        
+#         water.distance 0.6187   0.7866   0.23 
+# Number of obs: 16522, groups:  BatID, 21
+# 
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -3.02072    0.14239 -21.215  < 2e-16 ***
+# SpeciesM.mystacinus                 0.27810    0.18365   1.514 0.129938    
+# gap3.mean.area                     -0.52485    0.07611  -6.896 5.34e-12 ***
+# D0                                 -0.28902    0.07462  -3.874 0.000107 ***
+# Hsd                                 0.30798    0.04966   6.201 5.60e-10 ***
+# water.distance                     -0.90175    0.18059  -4.993 5.94e-07 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.33266    0.10455   3.182 0.001464 ** 
+# SpeciesM.mystacinus:D0              0.50640    0.10080   5.024 5.06e-07 ***
+# SpeciesM.mystacinus:Hsd             0.06735    0.06920   0.973 0.330430    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) SpcsM. gp3.m. D0     Hsd    wtr.ds SM.:3. SM.:D0
+# SpcsM.mystc -0.748                                                 
+# gap3.mean.r  0.020 -0.013                                          
+# D0           0.022 -0.017  0.718                                   
+# Hsd         -0.061  0.051  0.258  0.056                            
+# water.dstnc  0.207 -0.028  0.023 -0.001  0.033                     
+# SpcsM.m:3.. -0.013  0.052 -0.728 -0.522 -0.188 -0.008              
+# SpcsM.my:D0 -0.022  0.013 -0.532 -0.740 -0.042 -0.024  0.723       
+# SpcsM.mys:H  0.048 -0.066 -0.185 -0.040 -0.717 -0.003  0.247  0.092
+
+sjPlot::tab_model(bigfit_H20, transform = NULL, auto.label = FALSE, show.re.var = TRUE,   show.fstat = TRUE, show.stat = TRUE) 
+
+
+```
+
+## Model diagnostics
+```{r}
+### Model diagnostics for 
+simulationOutput <- DHARMa::simulateResiduals(fittedModel = bigfit_H20, plot = T)
+### Help with interpretation of residuals vs. predicted: 
+# https://stats.stackexchange.com/questions/449208/diagnostic-plot-residual-vs-predicted-of-a-glmm-using-dharma
+### recalculateResiduals()
+# KS test -  the p-value shows you that there is *not* a significant deviation from the assumed distribution
+# Dispersion test – Not over or underdispersed
+# Outlier – No indication of outliers 
+# 
+# Unfortunately there is a pattern for the residuals vs predicted test
+
+DHARMa::testDispersion(simulationOutput)
+# 
+# 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
+# 	simulated
+# 
+# data:  simulationOutput
+# dispersion = 1.0038, p-value = 0.888
+# alternative hypothesis: two.sided
+# no strong evidence for Dispersion issues 
+DHARMa::testZeroInflation(simulationOutput)
+# 	DHARMa zero-inflation test via comparison to expected zeros with simulation
+# 	under H0 = fitted model
+# 
+# data:  simulationOutput
+# ratioObsSim = 1, p-value = 0.944
+# alternative hypothesis: two.sided
+# No strong evidence for zero inflation 
+DHARMa::testQuantiles(simulationOutput)
+# 	Test for location of quantiles via qgam
+# 
+# 	Test for location of quantiles via qgam
+# 
+# data:  simulationOutput
+# p-value = 0.147
+# alternative hypothesis: both
+
+
+DHARMa::testCategorical(simulationOutput, catPred = dt1$BatID)
+## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+#$homogeneity
+# Levene's Test for Homogeneity of Variance (center = median)
+#          Df F value Pr(>F)
+# group    20  1.2088  0.235
+#       16501 
+DHARMa::testCategorical(simulationOutput, catPred = dt1$Species)
+## No bat species had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+# $homogeneity
+# Levene's Test for Homogeneity of Variance (center = median)
+#          Df F value Pr(>F)
+# group     1  1.9508 0.1625
+#       16520               
+library(car)
+vif(bigfit_H20)
+        #        Species         gap3.mean.area                     D0                    Hsd 
+        #       1.016827               4.817767               4.757118               2.239761 
+        # water.distance Species:gap3.mean.area             Species:D0            Species:Hsd 
+        #       1.008159               4.792060               4.774078               2.196397
+
+### All these values are lower than the previous full model 
+## Old model 
+            #    Species         gap3.mean.area                     D0 
+            #   1.093962               5.201610               5.476647 
+            #        Hsd         water.distance Species:gap3.mean.area 
+            #   2.125315               1.171877               5.317849 
+            # Species:D0            Species:Hsd 
+            #   5.645544               2.141335 
+
+
+# Higher VIF values for interacting terms is not too much of a concern 
+```
+
+## Compared to the old model 
+```{r}
+
+bigfit2 =  glmer(used ~  Species + 
+                   gap3.mean.area + 
+                   D0 + Hsd + water.distance +
+                   Species*gap3.mean.area + 
+                   Species*D0 + 
+                   Species*Hsd + 
+                   (1|BatID), data=dt1,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(bigfit2)
+
+simulationOutput <- DHARMa::simulateResiduals(fittedModel = bigfit2, plot = T)
+### Help with interpretation of residuals vs. predicted: 
+# https://stats.stackexchange.com/questions/449208/diagnostic-plot-residual-vs-predicted-of-a-glmm-using-dharma
+### recalculateResiduals()
+# KS test -  the p-value shows you that there is *not* a significant deviation from the assumed distribution
+# Dispersion test – Not over or underdispersed
+# Outlier – No indication of outliers 
+# 
+# Unfortunately there is a pattern for the residuals vs predicted test
+
+DHARMa::testDispersion(simulationOutput)
+# 
+# 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
+# 	simulated
+# 
+# data:  simulationOutput
+# dispersion = 1.0026, p-value = 0.888
+# alternative hypothesis: two.sided
+DHARMa::testZeroInflation(simulationOutput)
+# 	DHARMa zero-inflation test via comparison to expected zeros with simulation
+# 	under H0 = fitted model
+# 
+# data:  simulationOutput
+# ratioObsSim = 0.99999, p-value = 1
+# alternative hypothesis: two.sided
+# No strong evidence for zero inflation 
+DHARMa::testQuantiles(simulationOutput)
+# 	Test for location of quantiles via qgam
+# 
+# 	Test for location of quantiles via qgam
+# 
+# data:  res
+# p-value = 0.1425
+# alternative hypothesis: both
+
+
+DHARMa::testCategorical(simulationOutput, catPred = dt1$BatID)
+## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+#$homogeneity
+# Levene's Test for Homogeneity of Variance (center = median)
+#          Df F value Pr(>F)
+# group    20  0.9837 0.4785
+#       16501  
+DHARMa::testCategorical(simulationOutput, catPred = dt1$Species)
+## No bat species had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+# Levene's Test for Homogeneity of Variance (center = median)
+#          Df F value Pr(>F)
+# group     1  0.5327 0.4655
+#       16520             
+
+```
+
+## Making predictions - using glm 
+
+
+OG model: 
+
+bigfit_H20<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  water.distance | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+
+```{r}
+
+library(ggeffects)
+
+pred <- ggeffects::ggpredict(bigfit_H20, terms = c("gap3.mean.area", "Species"))
+plot(pred)
+
+pred <- ggeffects::ggpredict(bigfit_H20, terms = c("water.distance", "Species"))
+plot(pred)
+
+pred <- ggeffects::ggpredict(bigfit_H20, terms = c("D0", "Species"))
+plot(pred)
+
+pred <- ggeffects::ggpredict(bigfit_H20, terms = c("Hsd", "Species"))
+plot(pred)
+
+# Number of Fisher Scoring iterations: 6
+batcolors = c("#32A5FF", "#011f4b") 
+
+# New facet label names for supp variable
+supp.labs <- c("M. brandtii", "M. mystacinus")
+names(supp.labs) <- c("M.brandtii", "M.mystacinus")
+### Plotting predictions ####
+# gap3.mean ---------------------------------------
+range.gm <- range(dt1$gap3.mean.area)
+range.gm
+# -1.040815  1.198892
+  
+pred <- data.frame(expand.grid(
+  D0 = mean(dt1$D0),
+  gap3.mean.area = seq(from = -1.040815  , to = 1.198892, by = 0.1),
+  Hsd = mean(dt1$Hsd), 
+  water.distance = mean(dt1$water.distance),
+  BatID = levels(dt1$BatID), 
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit_H20, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+## Plot 
+p1 <- ggplot2::ggplot(pred, ggplot2::aes(gap3.mean.area, PP)) + 
+  ggplot2::geom_line(ggplot2::aes(col = factor(Species)), linewidth = 1.5) + 
+  ggplot2::geom_ribbon(ggplot2::aes(x = gap3.mean.area, ymin = LL, ymax = UL,
+              fill = factor(Species)), alpha = 0.4)  +
+  ggplot2::facet_wrap(~Species, labeller = ggplot2::labeller(Species = supp.labs)) +
+  ggplot2::scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(strip.text = ggplot2::element_text(face = "italic"),
+        legend.position="none") +
+  ggplot2::scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  ggplot2::xlab ("Mean gap area") +
+  ggplot2::ylab ("") +
+  ggplot2::theme(text = ggplot2::element_text(size=20))
+p1
+
+# distance to water ---------------------------------------
+range.gs <- range(dt1$water.distance)
+range.gs
+#-1.282820  3.698758
+  
+pred <- data.frame(expand.grid(
+  D0 = mean(dt1$D0),
+  gap3.mean.area = mean(dt1$gap3.mean.area),
+  Hsd = mean(dt1$Hsd), 
+  water.distance = seq(from = -1.282820  , to = 3.698758, by = 0.1),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+
+## Plot 
+p2 <- ggplot(pred, aes(water.distance, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = water.distance, ymin = LL, ymax = UL, 
+              fill = factor(Species)), alpha = 0.4) +
+  facet_wrap(~Species,labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  xlab ("Distance to water") +
+  ylab ("") +
+  theme(text = element_text(size=20))
+p2
+
+
+# D0---------------------------------------
+range.D0 <- range(dt1$D0)
+range.D0
+# -0.9838802  3.3390781
+  
+pred <- data.frame(expand.grid(
+  D0 = seq(from = -0.9838802, to = 3.3390781, by = 0.1),
+  gap3.sd.area = mean(dt1$gap3.sd.area),
+  gap3.mean.area = mean(dt1$gap3.mean.area),
+  Hsd = mean(dt1$Hsd), 
+  water.distance = mean(dt1$water.distance),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+## Plot 
+p3 <- ggplot(pred, aes(D0, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = D0, ymin = LL, ymax = UL,
+                  fill = factor(Species)), alpha = 0.4) + 
+  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  ylab ("") +
+  xlab ("D0") +
+  theme(text = element_text(size=20))
+p3
+
+# Hsd ---------------------------------------
+range.Hsd <- range(dt1$Hsd)
+range.Hsd
+
+#Now: 
+# -2.233849  3.866324
+
+# Previously 
+# -2.125363  3.625778
+  
+pred <- data.frame(expand.grid(
+  D0 = mean(dt1$D0),
+  gap3.sd.area = mean(dt1$gap3.sd.area),
+  gap3.mean.area = mean(dt1$gap3.mean.area),
+  Hsd = seq(from = -2.233849, to = 3.866324, by = 0.1), 
+  water.distance = mean(dt1$water.distance),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+## Plot 
+p4 <- ggplot(pred, aes(Hsd, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = Hsd, ymin = LL, ymax = UL, 
+                  fill = factor(Species)), alpha = 0.4) + 
+  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  xlab ("Hsd") +
+  ylab("") +
+  theme(text = element_text(size=20))
+p4
+
+library(cowplot)
+windows()
+cowplot::plot_grid(p1, p2, p3, p4, nrow = 4, 
+                   labels = c("a.", "b.", "c.", "d."), 
+                   label_x = 0.08, label_y = 0.08,
+                   hjust = -0.5, vjust = -0.5) +
+  theme(text = element_text(size=16)) 
+
+ggsave(path = output_today, filename = "Fig3.tiff", width = 9, height = 12, device='tiff', dpi=600)
+
+
+cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, 
+                   labels = c("a.", "b.", "c.", "d."), 
+                   label_x = 0.08, label_y = 0.08,
+                   hjust = -0.5, vjust = -0.5) +
+  theme(text = element_text(size=16)) 
+
+ggsave(path = output_today, filename = "Fig3_forKappa.tiff", width = 10, height = 7, device='tiff', dpi=300)
+
+
+output_today
+```
+
