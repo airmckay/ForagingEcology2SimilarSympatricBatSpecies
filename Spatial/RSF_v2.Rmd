@@ -441,19 +441,6 @@ bigfit_H20<- lme4::glmer(
 
 ```{r}
 
-library(ggeffects)
-
-pred <- ggeffects::ggpredict(bigfit_H20, terms = c("gap3.mean.area", "Species"))
-plot(pred)
-
-pred <- ggeffects::ggpredict(bigfit_H20, terms = c("water.distance", "Species"))
-plot(pred)
-
-pred <- ggeffects::ggpredict(bigfit_H20, terms = c("D0", "Species"))
-plot(pred)
-
-pred <- ggeffects::ggpredict(bigfit_H20, terms = c("Hsd", "Species"))
-plot(pred)
 
 # Number of Fisher Scoring iterations: 6
 batcolors = c("#32A5FF", "#011f4b") 
@@ -461,189 +448,259 @@ batcolors = c("#32A5FF", "#011f4b")
 # New facet label names for supp variable
 supp.labs <- c("M. brandtii", "M. mystacinus")
 names(supp.labs) <- c("M.brandtii", "M.mystacinus")
+
+
+## Alternative approach for visualizing the predictions
+
+library(ggeffects)
+
+## gap3.mean.area
+pred_g <- ggeffects::ggpredict(bigfit_H20, terms = c("gap3.mean.area [all]", "Species"))
+gg_pred_g <- plot(pred_g, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "", x = "Mean gap area") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_g
+
+## water.distance
+pred_w <- ggeffects::ggpredict(bigfit_H20, terms = c("water.distance [all]", "Species"))
+gg_pred_w <- plot(pred_w, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "", x = "Distance to water") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_w
+
+## D0
+pred_d <- ggeffects::ggpredict(bigfit_H20, terms = c("D0 [all]", "Species"))
+gg_pred_d <- plot(pred_d, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_d
+
+## Hsd
+pred_h <- ggeffects::ggpredict(bigfit_H20, terms = c("Hsd [all]", "Species"))
+gg_pred_h <- plot(pred_h, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_h
+
+library(ggeffects)
+library(ggplot2)
+library(cowplot)
+
+class()
+
+combined <- cowplot::plot_grid(gg_pred_g, gg_pred_w, gg_pred_d, gg_pred_h, ncol = 2)
+
+title <- ggdraw() +
+  draw_label(
+    "Predicted use of habitat",
+    fontface = "bold",
+    size = 16,
+    x = 0.5,
+    hjust = 0.5
+  )
+
+fig3 <- plot_grid(
+  title, combined,
+  ncol = 1,
+  rel_heights = c(0.1, 1)
+)
+
+fig3
+
 ### Plotting predictions ####
 # gap3.mean ---------------------------------------
-range.gm <- range(dt1$gap3.mean.area)
-range.gm
-# -1.040815  1.198892
-  
-pred <- data.frame(expand.grid(
-  D0 = mean(dt1$D0),
-  gap3.mean.area = seq(from = -1.040815  , to = 1.198892, by = 0.1),
-  Hsd = mean(dt1$Hsd), 
-  water.distance = mean(dt1$water.distance),
-  BatID = levels(dt1$BatID), 
-  Species = c("M.brandtii", "M.mystacinus"))) 
-  
-pred <- cbind(pred, predict(bigfit_H20, newdata = pred,
-                             type = "link", se.fit = TRUE))
-pred$PP <- plogis(pred$fit)
-pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
-pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
-## Plot 
-p1 <- ggplot2::ggplot(pred, ggplot2::aes(gap3.mean.area, PP)) + 
-  ggplot2::geom_line(ggplot2::aes(col = factor(Species)), linewidth = 1.5) + 
-  ggplot2::geom_ribbon(ggplot2::aes(x = gap3.mean.area, ymin = LL, ymax = UL,
-              fill = factor(Species)), alpha = 0.4)  +
-  ggplot2::facet_wrap(~Species, labeller = ggplot2::labeller(Species = supp.labs)) +
-  ggplot2::scale_y_continuous(
-  labels = scales::number_format(accuracy = 0.01,
-                                 decimal.mark = '.')) +
-  ggplot2::theme_bw() +
-  ggplot2::theme(strip.text = ggplot2::element_text(face = "italic"),
-        legend.position="none") +
-  ggplot2::scale_colour_manual(values = 
-                        batcolors,  
-                      aesthetics = c("fill", "colour"), 
-                      name = "Bat species") + 
-  ggplot2::xlab ("Mean gap area") +
-  ggplot2::ylab ("") +
-  ggplot2::theme(text = ggplot2::element_text(size=20))
-p1
+# range.gm <- range(dt1$gap3.mean.area)
+# range.gm
+# # -1.040815  1.198892
+#   
+# pred<- data.frame(expand.grid(
+#   D0 = mean(dt1$D0),
+#   gap3.mean.area = seq(from = -1.040815  , to = 1.198892, by = 0.1),
+#   Hsd = mean(dt1$Hsd), 
+#   water.distance = mean(dt1$water.distance),
+#   BatID = levels(dt1$BatID), 
+#   Species = c("M.brandtii", "M.mystacinus"))) 
+#   
+# pred <- cbind(pred, predict(bigfit_H20, newdata = pred,
+#                              type = "link", se.fit = TRUE))
+# pred$PP <- plogis(pred$fit)
+# pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+# pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+# ## Plot 
+# p1 <- ggplot2::ggplot(pred, ggplot2::aes(gap3.mean.area, PP)) + 
+#   ggplot2::geom_line(ggplot2::aes(col = factor(Species)), linewidth = 1.5) + 
+#   ggplot2::geom_ribbon(ggplot2::aes(x = gap3.mean.area, ymin = LL, ymax = UL,
+#               fill = factor(Species)), alpha = 0.4)  +
+#   ggplot2::facet_wrap(~Species, labeller = ggplot2::labeller(Species = supp.labs)) +
+#   ggplot2::scale_y_continuous(
+#   labels = scales::number_format(accuracy = 0.01,
+#                                  decimal.mark = '.')) +
+#   ggplot2::theme_bw() +
+#   ggplot2::theme(strip.text = ggplot2::element_text(face = "italic"),
+#         legend.position="none") +
+#   ggplot2::scale_colour_manual(values = 
+#                         batcolors,  
+#                       aesthetics = c("fill", "colour"), 
+#                       name = "Bat species") + 
+#   ggplot2::xlab ("Mean gap area") +
+#   ggplot2::ylab ("") +
+#   ggplot2::theme(text = ggplot2::element_text(size=20))
+# p1
+# 
+# # distance to water ---------------------------------------
+# range.gs <- range(dt1$water.distance)
+# range.gs
+# #-1.282820  3.698758
+#   
+# pred <- data.frame(expand.grid(
+#   D0 = mean(dt1$D0),
+#   gap3.mean.area = mean(dt1$gap3.mean.area),
+#   Hsd = mean(dt1$Hsd), 
+#   water.distance = seq(from = -1.282820  , to = 3.698758, by = 0.1),
+#   Species = c("M.brandtii", "M.mystacinus"))) 
+#   
+# pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+#                              type = "link", se.fit = TRUE))
+# pred$PP <- plogis(pred$fit)
+# pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+# pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+# 
+# ## Plot 
+# p2 <- ggplot(pred, aes(water.distance, PP)) + 
+#   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+#   geom_ribbon(aes(x = water.distance, ymin = LL, ymax = UL, 
+#               fill = factor(Species)), alpha = 0.4) +
+#   facet_wrap(~Species,labeller = labeller(Species = supp.labs)) +
+#   scale_y_continuous(
+#   labels = scales::number_format(accuracy = 0.01,
+#                                  decimal.mark = '.')) +
+#   theme_bw() +
+#   theme(strip.text = element_text(face = "italic"),
+#         legend.position="none") +
+#   scale_colour_manual(values = 
+#                         batcolors,  
+#                       aesthetics = c("fill", "colour"), 
+#                       name = "Bat species") + 
+#   xlab ("Distance to water") +
+#   ylab ("") +
+#   theme(text = element_text(size=20))
+# p2
+# 
+# 
+# # D0---------------------------------------
+# range.D0 <- range(dt1$D0)
+# range.D0
+# # -0.9838802  3.3390781
+#   
+# pred <- data.frame(expand.grid(
+#   D0 = seq(from = -0.9838802, to = 3.3390781, by = 0.1),
+#   gap3.sd.area = mean(dt1$gap3.sd.area),
+#   gap3.mean.area = mean(dt1$gap3.mean.area),
+#   Hsd = mean(dt1$Hsd), 
+#   water.distance = mean(dt1$water.distance),
+#   Species = c("M.brandtii", "M.mystacinus"))) 
+#   
+# pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+#                              type = "link", se.fit = TRUE))
+# pred$PP <- plogis(pred$fit)
+# pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+# pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+# ## Plot 
+# p3 <- ggplot(pred, aes(D0, PP)) + 
+#   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+#   geom_ribbon(aes(x = D0, ymin = LL, ymax = UL,
+#                   fill = factor(Species)), alpha = 0.4) + 
+#   facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+#   scale_y_continuous(
+#   labels = scales::number_format(accuracy = 0.01,
+#                                  decimal.mark = '.')) +
+#   theme_bw() +
+#   theme(strip.text = element_text(face = "italic"),
+#         legend.position="none") +
+#   scale_colour_manual(values = 
+#                         batcolors,  
+#                       aesthetics = c("fill", "colour"), 
+#                       name = "Bat species") + 
+#   ylab ("") +
+#   xlab ("D0") +
+#   theme(text = element_text(size=20))
+# p3
+# 
+# # Hsd ---------------------------------------
+# range.Hsd <- range(dt1$Hsd)
+# range.Hsd
+# 
+# #Now: 
+# # -2.233849  3.866324
+# 
+# # Previously 
+# # -2.125363  3.625778
+#   
+# pred <- data.frame(expand.grid(
+#   D0 = mean(dt1$D0),
+#   gap3.sd.area = mean(dt1$gap3.sd.area),
+#   gap3.mean.area = mean(dt1$gap3.mean.area),
+#   Hsd = seq(from = -2.233849, to = 3.866324, by = 0.1), 
+#   water.distance = mean(dt1$water.distance),
+#   Species = c("M.brandtii", "M.mystacinus"))) 
+#   
+# pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+#                              type = "link", se.fit = TRUE))
+# pred$PP <- plogis(pred$fit)
+# pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+# pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+# ## Plot 
+# p4 <- ggplot(pred, aes(Hsd, PP)) + 
+#   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+#   geom_ribbon(aes(x = Hsd, ymin = LL, ymax = UL, 
+#                   fill = factor(Species)), alpha = 0.4) + 
+#   facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+#   scale_y_continuous(
+#   labels = scales::number_format(accuracy = 0.01,
+#                                  decimal.mark = '.')) +
+#   theme_bw() +
+#   theme(strip.text = element_text(face = "italic"),
+#         legend.position="none") +
+#   scale_colour_manual(values = 
+#                         batcolors,  
+#                       aesthetics = c("fill", "colour"), 
+#                       name = "Bat species") + 
+#   xlab ("Hsd") +
+#   ylab("") +
+#   theme(text = element_text(size=20))
+# p4
+# 
+# library(cowplot)
+# windows()
+# cowplot::plot_grid(p1, p2, p3, p4, nrow = 4, 
+#                    labels = c("a.", "b.", "c.", "d."), 
+#                    label_x = 0.08, label_y = 0.08,
+#                    hjust = -0.5, vjust = -0.5) +
+#   theme(text = element_text(size=16)) 
+# 
+# ggsave(path = output_today, filename = "Fig3.tiff", width = 9, height = 12, device='tiff', dpi=600)
+# 
+# 
+# cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, 
+#                    labels = c("a.", "b.", "c.", "d."), 
+#                    label_x = 0.08, label_y = 0.08,
+#                    hjust = -0.5, vjust = -0.5) +
+#   theme(text = element_text(size=16)) 
+# 
+# ggsave(path = output_today, filename = "Fig3_forKappa.tiff", width = 10, height = 7, device='tiff', dpi=300)
+# 
+# 
+# output_today
 
-# distance to water ---------------------------------------
-range.gs <- range(dt1$water.distance)
-range.gs
-#-1.282820  3.698758
-  
-pred <- data.frame(expand.grid(
-  D0 = mean(dt1$D0),
-  gap3.mean.area = mean(dt1$gap3.mean.area),
-  Hsd = mean(dt1$Hsd), 
-  water.distance = seq(from = -1.282820  , to = 3.698758, by = 0.1),
-  Species = c("M.brandtii", "M.mystacinus"))) 
-  
-pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
-                             type = "link", se.fit = TRUE))
-pred$PP <- plogis(pred$fit)
-pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
-pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
-
-## Plot 
-p2 <- ggplot(pred, aes(water.distance, PP)) + 
-  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = water.distance, ymin = LL, ymax = UL, 
-              fill = factor(Species)), alpha = 0.4) +
-  facet_wrap(~Species,labeller = labeller(Species = supp.labs)) +
-  scale_y_continuous(
-  labels = scales::number_format(accuracy = 0.01,
-                                 decimal.mark = '.')) +
-  theme_bw() +
-  theme(strip.text = element_text(face = "italic"),
-        legend.position="none") +
-  scale_colour_manual(values = 
-                        batcolors,  
-                      aesthetics = c("fill", "colour"), 
-                      name = "Bat species") + 
-  xlab ("Distance to water") +
-  ylab ("") +
-  theme(text = element_text(size=20))
-p2
 
 
-# D0---------------------------------------
-range.D0 <- range(dt1$D0)
-range.D0
-# -0.9838802  3.3390781
-  
-pred <- data.frame(expand.grid(
-  D0 = seq(from = -0.9838802, to = 3.3390781, by = 0.1),
-  gap3.sd.area = mean(dt1$gap3.sd.area),
-  gap3.mean.area = mean(dt1$gap3.mean.area),
-  Hsd = mean(dt1$Hsd), 
-  water.distance = mean(dt1$water.distance),
-  Species = c("M.brandtii", "M.mystacinus"))) 
-  
-pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
-                             type = "link", se.fit = TRUE))
-pred$PP <- plogis(pred$fit)
-pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
-pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
-## Plot 
-p3 <- ggplot(pred, aes(D0, PP)) + 
-  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = D0, ymin = LL, ymax = UL,
-                  fill = factor(Species)), alpha = 0.4) + 
-  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
-  scale_y_continuous(
-  labels = scales::number_format(accuracy = 0.01,
-                                 decimal.mark = '.')) +
-  theme_bw() +
-  theme(strip.text = element_text(face = "italic"),
-        legend.position="none") +
-  scale_colour_manual(values = 
-                        batcolors,  
-                      aesthetics = c("fill", "colour"), 
-                      name = "Bat species") + 
-  ylab ("") +
-  xlab ("D0") +
-  theme(text = element_text(size=20))
-p3
-
-# Hsd ---------------------------------------
-range.Hsd <- range(dt1$Hsd)
-range.Hsd
-
-#Now: 
-# -2.233849  3.866324
-
-# Previously 
-# -2.125363  3.625778
-  
-pred <- data.frame(expand.grid(
-  D0 = mean(dt1$D0),
-  gap3.sd.area = mean(dt1$gap3.sd.area),
-  gap3.mean.area = mean(dt1$gap3.mean.area),
-  Hsd = seq(from = -2.233849, to = 3.866324, by = 0.1), 
-  water.distance = mean(dt1$water.distance),
-  Species = c("M.brandtii", "M.mystacinus"))) 
-  
-pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
-                             type = "link", se.fit = TRUE))
-pred$PP <- plogis(pred$fit)
-pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
-pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
-## Plot 
-p4 <- ggplot(pred, aes(Hsd, PP)) + 
-  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = Hsd, ymin = LL, ymax = UL, 
-                  fill = factor(Species)), alpha = 0.4) + 
-  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
-  scale_y_continuous(
-  labels = scales::number_format(accuracy = 0.01,
-                                 decimal.mark = '.')) +
-  theme_bw() +
-  theme(strip.text = element_text(face = "italic"),
-        legend.position="none") +
-  scale_colour_manual(values = 
-                        batcolors,  
-                      aesthetics = c("fill", "colour"), 
-                      name = "Bat species") + 
-  xlab ("Hsd") +
-  ylab("") +
-  theme(text = element_text(size=20))
-p4
-
-library(cowplot)
-windows()
-cowplot::plot_grid(p1, p2, p3, p4, nrow = 4, 
-                   labels = c("a.", "b.", "c.", "d."), 
-                   label_x = 0.08, label_y = 0.08,
-                   hjust = -0.5, vjust = -0.5) +
-  theme(text = element_text(size=16)) 
-
-ggsave(path = output_today, filename = "Fig3.tiff", width = 9, height = 12, device='tiff', dpi=600)
-
-
-cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, 
-                   labels = c("a.", "b.", "c.", "d."), 
-                   label_x = 0.08, label_y = 0.08,
-                   hjust = -0.5, vjust = -0.5) +
-  theme(text = element_text(size=16)) 
-
-ggsave(path = output_today, filename = "Fig3_forKappa.tiff", width = 10, height = 7, device='tiff', dpi=300)
-
-
-output_today
 ```
 

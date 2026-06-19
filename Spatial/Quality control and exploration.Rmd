@@ -1298,3 +1298,17 @@ print(coef_compare)
 # SpeciesM.mystacinus:Hsd                       SpeciesM.mystacinus:Hsd  0.1439242   0.09295824
 ```
 
+## Katrine's further recommendations
+GLM
+Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
+family=binomial(link="logit"),nAGQ = 0)
+
+Prob.use ~ Hsd + homerange size + Hsd*homerange size
+Prob.use ~ water.distance + homerange size + water.distance*homerange size 
+Prob.use ~ gap3.mean + homerange size + gap3.mean*homerange size
+
+
+### 
+RSF version 2 h20
+- include HR in the model as a fixed effect
+- include HR as an offset variable 
