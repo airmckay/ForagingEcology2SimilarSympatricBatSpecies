@@ -27,6 +27,32 @@ This mark down builds on the work flow established in "Diet results post SRS.Rmd
 ### Prepare work space and load packages
 
 ```{r setup, include=FALSE}
+# In case you need to install phyloseq: 
+
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+# BiocManager::install("phyloseq")
+
+## for installing metaMisc
+# if (!requireNamespace("remotes", quietly = TRUE)) {
+#   install.packages("remotes")
+# }
+# 
+# remotes::install_github("vmikk/metagMisc")
+
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+
+# 2. Install qiime2R from GitHub
+remotes::install_github("jbisanz/qiime2R")
+
+# 3. Load the library to verify it works
+library(qiime2R)
+
+library(phyloseq)
+library(metagMisc)
 
 ##############################################################
 library(rlang)
@@ -77,6 +103,7 @@ library(vegan)
 library(picante)
 library(kableExtra)
 library(stringr)
+
 
 ##############################################################
 getwd()

@@ -143,7 +143,7 @@ dt$BatID <- factor(dt$BatID) # 21 bats
 dt1df<-st_drop_geometry(dt)
 dt1df$Species <- factor(dt1df$Species)
 dt1df <- as.data.frame(dt)
-dt1df <- dt1df %>% select(-geom)
+dt1df <- dt1df %>% dplyr::select(-geom)
 dim(dt1df)
 # 16522 obs of 50 vars
 
@@ -196,8 +196,6 @@ table(dtx$BatID)
 
  
  ## Fixed! 
-
-
 ## There is an -Inf value for Hmax which can be corrrected like this: 
 dtx$Hmax <- gsub("-Inf", "0.5", dtx$Hmax)
 dtx$Hmax <- as.numeric(dtx$Hmax)
@@ -332,8 +330,8 @@ BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
 # bigfit_gap 12 9566.140
 # bigfit_H20 12 9297.663
 
-## Lower BIC = better (context still matters) 
 
+## Lower BIC = better (context still matters) 
 bic_tab <- BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
 bic_tab$delta_BIC <- bic_tab$BIC - min(bic_tab$BIC)
 bic_tab[order(bic_tab$BIC), ]
@@ -365,7 +363,35 @@ anova(bigfit2, bigfit_H20, test = "Chisq")
 # 
 # 
 # Compared with bigfit2, the model bigfit_H20 had substantially lower BIC (9297.7 vs. 9640.4) and provided a significantly better fit to the data (likelihood ratio test: χ² = 362.17, df = 2, p < 2.2 × 10⁻¹⁶). Thus, bigfit_H20 was strongly supported over bigfit2.
+
+
+
+
+
+
 ```
+
+
+## Katrine's further recommendations
+GLM
+Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
+family=binomial(link="logit"),nAGQ = 0)
+
+Prob.use ~ Hsd + homerange size + Hsd*homerange size
+Prob.use ~ water.distance + homerange size + water.distance*homerange size 
+Prob.use ~ gap3.mean + homerange size + gap3.mean*homerange size
+
+
+### 
+RSF version 2 h20
+- include HR in the model as a fixed effect
+- include HR as an offset variable 
+```{r}
+### Some additional tetst 
+
+
+```
+
 
 
 
@@ -422,6 +448,13 @@ print(var_by_species)
 ## Further troubleshoot the model to test the robustness
 How much does a single individual influence the outcome of the model? 
 ```{r}
+ library(pkgconfig)
+# # or
+# require(pkgconfig)
+# remove.packages("pkgconfig")
+# install.packages("pkgconfig", dependencies = TRUE)
+# update.packages(ask = FALSE, checkBuilt = TRUE)
+
 # =============================================================================
 #  COOK'S DISTANCE AND DFBETAS (influence.ME)
 # =============================================================================
@@ -477,7 +510,6 @@ cook_df <- data.frame(
 
 cook_df
 
-
 # Threshold: common rule of thumb is 4/n (conservative) or visual inspection
 threshold_cook <- 4 / 21
 
@@ -503,26 +535,26 @@ temp <- dt1 %>% mutate(individual_id = BatID,
 # --- DFBETAS ---
 dfb <- dfbetas(infl)
 dfb_df <- as.data.frame(dfb) |>
-  mutate(individual_id = rownames(dfb)) |>
-  pivot_longer(-individual_id, names_to = "coefficient", values_to = "dfbeta") |>
-  left_join(distinct(temp, individual_id, species), by = "individual_id")
+  dplyr::mutate(individual_id = rownames(dfb)) |>
+  tidyr::pivot_longer(-individual_id, names_to = "coefficient", values_to = "dfbeta") |>
+  dplyr::left_join(dplyr::distinct(temp, individual_id, species), by = "individual_id")
 
 # DFBETAS threshold: |DFBETAS| > 2/sqrt(n)
 threshold_dfb <- 2 / sqrt(21)
 
-p_dfb <- ggplot(dfb_df, aes(x = reorder(individual_id, abs(dfbeta)),
+p_dfb <- ggplot2::ggplot(dfb_df, ggplot2::aes(x = reorder(individual_id, abs(dfbeta)),
                               y = dfbeta, colour = species)) +
-  geom_point(size = 2) +
-  geom_hline(yintercept =  threshold_dfb, linetype = "dashed", colour = "red") +
-  geom_hline(yintercept = -threshold_dfb, linetype = "dashed", colour = "red") +
-  facet_wrap(~ coefficient, scales = "free_y") +
-  coord_flip() +
-  labs(
+  ggplot2::geom_point(size = 2) +
+  ggplot2::geom_hline(yintercept =  threshold_dfb, linetype = "dashed", colour = "red") +
+  ggplot2::geom_hline(yintercept = -threshold_dfb, linetype = "dashed", colour = "red") +
+  ggplot2::facet_wrap(~ coefficient, scales = "free_y") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
     title = "DFBETAS by individual and coefficient",
     subtitle = paste0("Dashed lines = ±2/√n threshold (±", round(threshold_dfb, 3), ")"),
     x = NULL, y = "DFBETAS"
   ) +
-  theme_bw(base_size = 9)
+  ggplot2::theme_bw(base_size = 9)
 
 print(p_dfb)
 #ggsave("dfbetas.png", p_dfb, width = 10, height = 7, dpi = 300)
@@ -747,7 +779,6 @@ print(p_loo)
 
 
 # Summary table of coefficient stability
-
 loo_stability <- loo_long %>%
   filter(dropped_BatID != "FULL MODEL") %>%
   group_by(coefficient) %>%
@@ -928,6 +959,8 @@ loo_stability <- loo_long %>%
  
  
 ```
+
+
 
 
 ```{r}
@@ -1298,17 +1331,4 @@ print(coef_compare)
 # SpeciesM.mystacinus:Hsd                       SpeciesM.mystacinus:Hsd  0.1439242   0.09295824
 ```
 
-## Katrine's further recommendations
-GLM
-Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
-family=binomial(link="logit"),nAGQ = 0)
 
-Prob.use ~ Hsd + homerange size + Hsd*homerange size
-Prob.use ~ water.distance + homerange size + water.distance*homerange size 
-Prob.use ~ gap3.mean + homerange size + gap3.mean*homerange size
-
-
-### 
-RSF version 2 h20
-- include HR in the model as a fixed effect
-- include HR as an offset variable 
