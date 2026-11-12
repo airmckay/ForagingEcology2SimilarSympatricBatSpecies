@@ -5,8 +5,18 @@ date: "2026-06-15"
 ---
 
 ```{r}
+
+# dir.create("lib", showWarnings = FALSE)
+# .libPaths(c("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/ForagingEcology2SimilarSympatricBatSpecies/ForagingEcology2SimilarSympatricBatSpecies", .libPaths()))
+# 
+# install.packages(c("tidyverse","influence.ME","lme4","DHARMa"), lib = "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/ForagingEcology2SimilarSympatricBatSpecies/ForagingEcology2SimilarSympatricBatSpecies", dependencies = TRUE)
+# 
+# 
+# library(tidyverse, lib.loc = "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/ForagingEcology2SimilarSympatricBatSpecies/ForagingEcology2SimilarSympatricBatSpecies")
+# library(influence.ME, lib.loc = "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/ForagingEcology2SimilarSympatricBatSpecies/ForagingEcology2SimilarSympatricBatSpecies")
+# library(lme4, lib.loc = "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/ForagingEcology2SimilarSympatricBatSpecies/ForagingEcology2SimilarSympatricBatSpecies")
+
 ### Prepare the work space
-library(tidyverse)
 library(dplyr)
 library(scales)
 library(beepr)
@@ -15,7 +25,6 @@ library(ResourceSelection)
 library(RColorBrewer)
 library(cowplot)
 library(colorBlindness)
-library(lme4)
 library(stats)
 library(DHARMa)
 library(lattice)
@@ -28,8 +37,8 @@ library(corrplot)
 library(vegan)
 library(mapview)
 library(sf)
-library(influence.ME)
 library(raster)
+library(stringr)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -48,7 +57,7 @@ output_today
 
 dir.create(output_today)
 output_today
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/QualityControlExploration_2026-06-15"
+#  'C:\Users\apmc\OneDrive - Norwegian University of Life Sciences\1. Nittedal 2018-2020\Nittedal_Main\Analyses\Outputs\QualityControlExploration_2026-11-12'
 
 
 ```
@@ -119,7 +128,7 @@ Mystacinus_ranges <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of L
 
 ## Import RSF data, re-run best model and run quality control tests on the robustness of the model 
 ```{r}
-
+library(readr)
 ## Covariates from LiDAR data prepared by Hans Ole 
 vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/231220_vars_dist50_v4_na-rm.rds")
 
@@ -210,12 +219,14 @@ dt1 <- dt2df
 dt1[,6:45]=scale(dt1[,6:45], scale=TRUE) #dt)
 
 dim(dt1)
+summary(dt1$BatID)
 # 16522 obs of 50 vars 
 
 ```
 
 ## Run RSF
 ```{r}
+library(lme4)
 bigfit2 =  glmer(used ~  Species + 
                    gap3.mean.area + 
                    D0 + Hsd + water.distance +
@@ -372,26 +383,6 @@ anova(bigfit2, bigfit_H20, test = "Chisq")
 ```
 
 
-## Katrine's further recommendations
-GLM
-Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
-family=binomial(link="logit"),nAGQ = 0)
-
-Prob.use ~ Hsd + homerange size + Hsd*homerange size
-Prob.use ~ water.distance + homerange size + water.distance*homerange size 
-Prob.use ~ gap3.mean + homerange size + gap3.mean*homerange size
-
-
-### 
-RSF version 2 h20
-- include HR in the model as a fixed effect
-- include HR as an offset variable 
-```{r}
-### Some additional tetst 
-
-
-```
-
 
 
 
@@ -455,6 +446,7 @@ How much does a single individual influence the outcome of the model?
 # install.packages("pkgconfig", dependencies = TRUE)
 # update.packages(ask = FALSE, checkBuilt = TRUE)
 
+library(influence.ME)
 # =============================================================================
 #  COOK'S DISTANCE AND DFBETAS (influence.ME)
 # =============================================================================
@@ -513,17 +505,17 @@ cook_df
 # Threshold: common rule of thumb is 4/n (conservative) or visual inspection
 threshold_cook <- 4 / 21
 
-p_cook <- ggplot(cook_df, aes(x = reorder(individual_id, cooks_d),
+p_cook <- ggplot2::ggplot(cook_df, ggplot2::aes(x = reorder(individual_id, cooks_d),
                                y = cooks_d, fill = species)) +
-  geom_col() +
-  geom_hline(yintercept = threshold_cook, linetype = "dashed", colour = "red") +
-  coord_flip() +
-  labs(
+  ggplot2::geom_col() +
+  ggplot2::geom_hline(yintercept = threshold_cook, linetype = "dashed", colour = "red") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
     title = "Cook's distance by individual",
     subtitle = paste0("Dashed line = 4/n threshold (", round(threshold_cook, 3), ")"),
     x = NULL, y = "Cook's D"
   ) +
-  theme_bw()
+  ggplot2::theme_bw()
 
 
 print(p_cook)
@@ -614,32 +606,33 @@ full_coefs$dropped_species    <- NA
 
 # Combine and reshape
 loo_long <- bind_rows(loo_results, full_coefs) |>
-  pivot_longer(
+  tidyr::pivot_longer(
     cols      = -c(dropped_individual, dropped_species),
     names_to  = "coefficient",
     values_to = "estimate"
   )
 
+library(ggplot2)
 # Plot: one panel per coefficient, each point is the LOO estimate
 p_loo <- loo_long |>
   filter(dropped_individual != "FULL MODEL") |>
-  ggplot(aes(x = reorder(dropped_individual, estimate),
+  ggplot2::ggplot(aes(x = reorder(dropped_individual, estimate),
              y = estimate, colour = dropped_species)) +
-  geom_point(size = 2) +
-  geom_hline(
+  ggplot2::geom_point(size = 2) +
+  ggplot2::geom_hline(
     data = filter(loo_long, dropped_individual == "FULL MODEL"),
     aes(yintercept = estimate),
     linetype = "dashed", colour = "black"
   ) +
-  facet_wrap(~ coefficient, scales = "free") +
-  coord_flip() +
-  labs(
+  ggplot2::facet_wrap(~ coefficient, scales = "free") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
     title   = "LOO jackknife: fixed-effect estimates",
     subtitle = "Dashed line = full-model estimate",
     x = "Dropped individual", y = "Estimate (log-odds)",
     colour = "Species"
   ) +
-  theme_bw(base_size = 9)
+  ggplot2::theme_bw(base_size = 9)
 
 print(p_loo)
 # 1: Removed 84 rows containing missing values or values outside the scale range (`geom_point()`). 
@@ -658,7 +651,7 @@ loo_stability <- loo_long |>
     .groups  = "drop"
   ) |>
   left_join(
-    pivot_longer(full_coefs[1, ], -c(dropped_individual, dropped_species),
+    tidyr::pivot_longer(full_coefs[1, ], -c(dropped_individual, dropped_species),
                  names_to = "coefficient", values_to = "full_estimate"),
     by = "coefficient"
   ) 
@@ -1124,211 +1117,71 @@ ggplot(effort, aes(n_nights, area, color = species)) +
 # =============================================================================
 #   EFFORT SENSITIVITY CHECK
 # =============================================================================
-# Test whether tracking effort (n_nights, n_positions) correlates with
-# habitat diversity or RSF coefficients, and whether including it as a
-# covariate changes species-level conclusions.
-
-# --- Correlation: home range size (proxy: n locations) vs habitat diversity ---
-# Replace shannon_H with your actual per-individual diversity measure
-
-## Run for each of the main habitat types 
-dat <- dt2 %>% mutate(individual_id = BatID,
-                      species = Species)
-
-########################## D0 #########################################
-effort_D0 <- dat |>
-  group_by(individual_id, species) |>
-  summarise(
-    n_used     = sum(used),
-    n_nights   = first(n_nights),
-    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
-    shannon_H  = {
-      props <- table(cut(D0[used == 1], breaks = 5)) / sum(used)
-      props <- props[props > 0]
-      -sum(props * log(props))
-    },
-    .groups = "drop"
-  )
-
-p_effort <- ggplot(effort_D0,
-                    aes(x = n_nights, y = shannon_H, colour = species)) +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  labs(
-    title = "Tracking effort vs D0 habitat diversity by individual",
-    x     = "Number of nights tracked",
-    y     = "Shannon H (habitat diversity)"
-  ) +
-  theme_bw()
-
-print(p_effort)
-ggsave(file = file.path(output_today,"effort_vs_diversity_D0.png"), p_effort, width = 6, height = 4, dpi = 300)
-
-# Formal test per species
-effort_D0 |>
-  group_by(species) |>
-  summarise(
-    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
-    cor_p = cor.test(n_nights, shannon_H)$p.value,
-    .groups = "drop"
-  ) |>
-  print()
-
-########################## HSD #########################################
-effort_Hsd <- dat |>
-  group_by(individual_id, species) |>
-  summarise(
-    n_used     = sum(used),
-    n_nights   = first(n_nights),
-    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
-    shannon_H  = {
-      props <- table(cut(Hsd[used == 1], breaks = 5)) / sum(used)
-      props <- props[props > 0]
-      -sum(props * log(props))
-    },
-    .groups = "drop"
-  )
-
-p_effort <- ggplot(effort_Hsd,
-                    aes(x = n_nights, y = shannon_H, colour = species)) +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  labs(
-    title = "Tracking effort vs Hsd habitat diversity by individual",
-    x     = "Number of nights tracked",
-    y     = "Shannon H (habitat diversity)"
-  ) +
-  theme_bw()
-
-print(p_effort)
-ggsave(file = file.path(output_today,"effort_vs_diversity_Hsd.png"), p_effort, width = 6, height = 4, dpi = 300)
-
-# Formal test per species
-effort_Hsd |>
-  group_by(species) |>
-  summarise(
-    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
-    cor_p = cor.test(n_nights, shannon_H)$p.value,
-    .groups = "drop"
-  ) |>
-  print()
-
-########################## gap3.mean.area #########################################
-effort_gap <- dat |>
-  group_by(individual_id, species) |>
-  summarise(
-    n_used     = sum(used),
-    n_nights   = first(n_nights),
-    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
-    shannon_H  = {
-      props <- table(cut(gap3.mean.area[used == 1], breaks = 5)) / sum(used)
-      props <- props[props > 0]
-      -sum(props * log(props))
-    },
-    .groups = "drop"
-  )
-
-p_effort <- ggplot(effort_gap,
-                    aes(x = n_nights, y = shannon_H, colour = species)) +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  labs(
-    title = "Tracking effort vs gap3.mean.area habitat diversity by individual",
-    x     = "Number of nights tracked",
-    y     = "Shannon H (habitat diversity)"
-  ) +
-  theme_bw()
-
-print(p_effort)
-ggsave(file = file.path(output_today,"effort_vs_diversity_gap3.mean.area.png"), p_effort, width = 6, height = 4, dpi = 300)
-
-effort_gap |>
-  group_by(species) |>
-  summarise(
-    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
-    cor_p = cor.test(n_nights, shannon_H)$p.value,
-    .groups = "drop"
-  ) |>
-  print()
 
 
-########################## water.distance #########################################
-effort_water <- dat |>
-  group_by(individual_id, species) |>
-  summarise(
-    n_used     = sum(used),
-    n_nights   = first(n_nights),
-    # Example diversity: Shannon H on habitat use (adapt to your habitat variable)
-    shannon_H  = {
-      props <- table(cut(water.distance[used == 1], breaks = 5)) / sum(used)
-      props <- props[props > 0]
-      -sum(props * log(props))
-    },
-    .groups = "drop"
-  )
 
-p_effort <- ggplot(effort_water,
-                    aes(x = n_nights, y = shannon_H, colour = species)) +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  labs(
-    title = "Tracking effort vs water.distance habitat diversity by individual",
-    x     = "Number of nights tracked",
-    y     = "Shannon H (habitat diversity)"
-  ) +
-  theme_bw()
 
-print(p_effort)
-ggsave(file = file.path(output_today,"effort_vs_diversity_water.distance.png"), p_effort, width = 6, height = 4, dpi = 300)
-
-effort_water |>
-  group_by(species) |>
-  summarise(
-    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
-    cor_p = cor.test(n_nights, shannon_H)$p.value,
-    .groups = "drop"
-  ) |>
-  print()
-
-################################################################################
-# Formal test per species
-effort_gap |>
-  group_by(species) |>
-  summarise(
-    cor_r = cor(n_nights, shannon_H, use = "complete.obs"),
-    cor_p = cor.test(n_nights, shannon_H)$p.value,
-    .groups = "drop"
-  ) |>
-  print()
-
-# --- Sensitivity model with effort covariate ---
-m_effort <- glmer(
- used ~  Species +  gap3.mean.area + 
-   D0 + Hsd + water.distance +
-   Species*gap3.mean.area + 
-   Species*Hsd + 
-   n_nights + 
-  (1|BatID), data=dt2,
- family=binomial(link="logit"),nAGQ = 0,
-  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
-)
-
-# Compare key coefficients between base and effort-adjusted model
-coef_compare <- data.frame(
-  coefficient = names(fixef(bigfit2)),
-  full_model  = fixef(bigfit2),
-  effort_model = fixef(m_effort)[names(fixef(bigfit2))]
-)
-print(coef_compare)
-# (Intercept)                                               (Intercept) -2.3726510  -2.36257872
-# SpeciesM.mystacinus                               SpeciesM.mystacinus -0.1943861  -0.22608964
-# gap3.mean.area                                         gap3.mean.area -0.6231665  -0.36312096 *** .3 difference
-# D0                                                                 D0 -0.4548980  -0.12822280 *** .3 difference
-# Hsd                                                               Hsd  0.2524302   0.27451972
-# water.distance                                         water.distance -0.5168179  -0.48966117
-# SpeciesM.mystacinus:gap3.mean.area SpeciesM.mystacinus:gap3.mean.area  0.4377611  -0.04761241 *** .4 difference
-# SpeciesM.mystacinus:D0                         SpeciesM.mystacinus:D0  0.6146687           NA *** NA?
-# SpeciesM.mystacinus:Hsd                       SpeciesM.mystacinus:Hsd  0.1439242   0.09295824
 ```
 
 
+
+## Katrine's further recommendations
+GLM
+Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
+family=binomial(link="logit"),nAGQ = 0)
+
+Prob.use ~ Hsd + homerange size + Hsd*homerange size
+Prob.use ~ water.distance + homerange size + water.distance*homerange size 
+Prob.use ~ gap3.mean + homerange size + gap3.mean*homerange size
+
+
+### 
+RSF version 2 h20
+- include HR in the model as a fixed effect
+- include HR as an offset variable 
+
+
+bigfit_H20<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  water.distance | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+
+```{r}
+# summary(dt1)
+# summary(BHR)
+# BHR <- BHR |> mutate(BatID = factor(id)) 
+# dt2 <- full_join(dt1, BHR)
+
+# summary(dt2)
+# summary(dt2$BatID)
+
+
+## START HERE - FIX MERGING HR SIZE WITH BAT ID/SPECIES 
+
+# Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
+# family=binomial(link="logit"),nAGQ = 0)
+### Some additional tests of different models  
+bigfit_test <- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  water.distance | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
+  
+  
+
+```
