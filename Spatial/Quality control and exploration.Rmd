@@ -39,6 +39,10 @@ library(mapview)
 library(sf)
 library(raster)
 library(stringr)
+library(readr)
+library(lme4)
+library(influence.ME)
+library(tidyverse)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -128,7 +132,7 @@ Mystacinus_ranges <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of L
 
 ## Import RSF data, re-run best model and run quality control tests on the robustness of the model 
 ```{r}
-library(readr)
+
 ## Covariates from LiDAR data prepared by Hans Ole 
 vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/231220_vars_dist50_v4_na-rm.rds")
 
@@ -226,7 +230,8 @@ summary(dt1$BatID)
 
 ## Run RSF
 ```{r}
-library(lme4)
+
+## This is the final model from the previous versions of the manuscript 
 bigfit2 =  glmer(used ~  Species + 
                    gap3.mean.area + 
                    D0 + Hsd + water.distance +
@@ -288,103 +293,6 @@ r2_nakagawa(bigfit2)
 ```
 
 
-## Now re-run the RSF with a random slope instead of a random intercept for Bat ID
-```{r}
-
-# Try random slope with D0 
-bigfit_d0<- lme4::glmer(
-  used ~ Species + 
-    gap3.mean.area + 
-    D0 + Hsd + water.distance +
-    Species * gap3.mean.area + 
-    Species * D0 + 
-    Species * Hsd + 
-    (1 + D0 | BatID),
-  data = dt1,
-  family = binomial(link = "logit"),
-  nAGQ = 0
-)
-
-# Try random slope with the gap variable 
-bigfit_gap<- lme4::glmer(
-  used ~ Species + 
-    gap3.mean.area + 
-    D0 + Hsd + water.distance +
-    Species * gap3.mean.area + 
-    Species * D0 + 
-    Species * Hsd + 
-    (1 +  gap3.mean.area | BatID),
-  data = dt1,
-  family = binomial(link = "logit"),
-  nAGQ = 0
-)
-
-# Try random slope with the distance to water variable
-bigfit_H20<- lme4::glmer(
-  used ~ Species + 
-    gap3.mean.area + 
-    D0 + Hsd + water.distance +
-    Species * gap3.mean.area + 
-    Species * D0 + 
-    Species * Hsd + 
-    (1 +  water.distance | BatID),
-  data = dt1,
-  family = binomial(link = "logit"),
-  nAGQ = 0
-)
-
-
-BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
-#            df      BIC
-# bigfit2    10 9640.403
-# bigfit_d0  12 9605.394
-# bigfit_gap 12 9566.140
-# bigfit_H20 12 9297.663
-
-
-## Lower BIC = better (context still matters) 
-bic_tab <- BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
-bic_tab$delta_BIC <- bic_tab$BIC - min(bic_tab$BIC)
-bic_tab[order(bic_tab$BIC), ]
-
-#            df      BIC delta_BIC
-# bigfit_H20 12 9297.663    0.0000
-# bigfit_gap 12 9566.140  268.4768
-# bigfit_d0  12 9605.394  307.7309
-# bigfit2    10 9640.403  342.7401
-
-# Common rough guidelines:
-# 
-# 0–2: little difference in support
-# 2–6: some evidence against the larger-BIC model
-# 6–10: strong evidence against it
-# >10: very strong evidence against it
-# So usually you choose the model with the lowest BIC, then interpret how much worse the others are via ΔBIC.
-
-## Compare H20 model with OG big fit
-
-anova(bigfit2, bigfit_H20, test = "Chisq")
-#            npar    AIC    BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    
-# bigfit2      10 9563.3 9640.4 -4771.6    9543.3                         
-# bigfit_H20   12 9205.1 9297.7 -4590.6    9181.1 362.17  2  < 2.2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-
-## Treating distance to water as a random slope has a significant improvement on the model 
-# 
-# 
-# Compared with bigfit2, the model bigfit_H20 had substantially lower BIC (9297.7 vs. 9640.4) and provided a significantly better fit to the data (likelihood ratio test: χ² = 362.17, df = 2, p < 2.2 × 10⁻¹⁶). Thus, bigfit_H20 was strongly supported over bigfit2.
-
-
-
-
-
-
-```
-
-
-
-
 
 ## Testing individual variation's influnece on RSF results (bigfit2) and home range sizes. 
 ```{r}
@@ -431,6 +339,172 @@ print(var_by_species)
   
   
 
+
+
+```
+
+
+
+```{r}
+
+############# Sensitivity checks ####################
+
+### Home range size first 
+
+temp <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/BatsMeta.xlsx")
+
+names(temp)
+summary(temp)
+# There is one NA for HR - that is Cecila (very little data on her) 
+
+effort <- temp %>% 
+  dplyr::select(BatID, HRha, Fixes, DaysTracked, Species) %>% 
+  rename(n_nights = DaysTracked,
+         n_positions = Fixes, 
+         area = HRha,
+         species = Species) %>% 
+  mutate(BatID = factor(BatID),
+         species = factor(species)) %>% 
+  dplyr::filter(BatID != "Cecilia") %>% 
+  droplevels()
+
+summary(effort)
+ #     BatID         area         n_positions        n_nights             species  
+ # Amelia : 1   Min.   :   8.0   Min.   :  8.00   Min.   : 2.00   M.brandtii  : 9  
+ # Aricia : 1   1st Qu.:  40.0   1st Qu.: 39.00   1st Qu.: 6.00   M.mystacinus:12  
+ # Astrid : 1   Median : 105.0   Median : 70.00   Median : 7.00                    
+ # Dagny  : 1   Mean   : 212.4   Mean   : 71.52   Mean   : 6.81                    
+ # Daisy  : 1   3rd Qu.: 190.0   3rd Qu.: 91.00   3rd Qu.: 8.00                    
+ # Ethel  : 1   Max.   :1274.0   Max.   :141.00   Max.   :11.00                    
+ # (Other):15                                                            
+
+
+temp1 <- effort %>% dplyr::select(BatID, area, n_nights, n_positions)
+
+### Now include the HR size and n points as columns to the larger RSF dataset 
+dt2 <- left_join(dt1, temp1)
+summary(dt2)
+# Looking good!! 
+
+## Now the effort dataset - with the number of nights and the number of points for each individuals 
+stest <- lm(log(area) ~ species + log(n_positions) + log(n_nights), data = effort)
+summary(stest)
+
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.77717 -0.57034 -0.06847  0.62102  1.85620 
+# 
+# Coefficients:
+#                     Estimate Std. Error t value Pr(>|t|)  
+# (Intercept)           4.0255     1.6737   2.405   0.0278 *
+# speciesM.mystacinus  -1.1020     0.5712  -1.929   0.0706 .
+# log(n_positions)     -0.3020     0.5020  -0.602   0.5554  
+# log(n_nights)         1.2907     0.9302   1.388   0.1832  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 1.165 on 17 degrees of freedom
+# Multiple R-squared:  0.3766,	Adjusted R-squared:  0.2665 
+# F-statistic: 3.423 on 3 and 17 DF,  p-value: 0.04105
+
+## Alternative 
+
+stest1 <- lm(log(area) ~ species * log(n_positions) + species * log(n_nights), data = effort)
+
+summary(stest1)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.45104 -0.39529 -0.07701  0.46841  1.82507 
+# 
+# Coefficients:
+#                                      Estimate Std. Error t value Pr(>|t|)  
+# (Intercept)                            8.8811     4.8998   1.813    0.090 .
+# speciesM.mystacinus                   -6.7849     5.1603  -1.315    0.208  
+# log(n_positions)                      -1.5001     0.9885  -1.517    0.150  
+# log(n_nights)                          1.4053     2.1171   0.664    0.517  
+# speciesM.mystacinus:log(n_positions)   1.5835     1.1507   1.376    0.189  
+# speciesM.mystacinus:log(n_nights)     -0.5245     2.3707  -0.221    0.828  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 1.163 on 15 degrees of freedom
+# Multiple R-squared:  0.4521,	Adjusted R-squared:  0.2694 
+# F-statistic: 2.475 on 5 and 15 DF,  p-value: 0.07961
+
+## Higher R value for tht second model and I think that the structure of the model is more ecologically meaningful - with interactions between species and each effor metric. 
+
+## Interpreation - basically, seems to be very little influence overall. 
+
+## Check for collinearity 
+
+cor(effort$n_positions, effort$n_nights)
+# 0.6568861 
+# That is pretty high ... so I will fit separate models for each effort metric 
+
+stest2 <- lm(log(area) ~ species * log(n_positions), data = effort)
+
+summary(stest2)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.65112 -0.54310  0.09984  0.58401  1.61207 
+# 
+# Coefficients:
+#                                      Estimate Std. Error t value Pr(>|t|)  
+# (Intercept)                           10.7955     3.8575   2.799   0.0123 *
+# speciesM.mystacinus                   -8.6159     4.1660  -2.068   0.0542 .
+# log(n_positions)                      -1.2739     0.9037  -1.410   0.1767  
+# speciesM.mystacinus:log(n_positions)   1.7143     0.9841   1.742   0.0996 .
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 1.132 on 17 degrees of freedom
+# Multiple R-squared:  0.4111,	Adjusted R-squared:  0.3071 
+# F-statistic: 3.955 on 3 and 17 DF,  p-value: 0.02617
+
+stest3 <- lm(log(area) ~ species * log(n_nights), data = effort)
+summary(stest3)
+# Residuals:
+#      Min       1Q   Median       3Q      Max 
+# -2.95586 -0.43259 -0.06082  0.61036  1.75639 
+# 
+# Coefficients:
+#                                   Estimate Std. Error t value Pr(>|t|)
+# (Intercept)                         4.7741     4.1232   1.158    0.263
+# speciesM.mystacinus                -2.5364     4.3189  -0.587    0.565
+# log(n_nights)                       0.2979     2.0061   0.148    0.884
+# speciesM.mystacinus:log(n_nights)   0.6938     2.1353   0.325    0.749
+# 
+# Residual standard error: 1.174 on 17 degrees of freedom
+# Multiple R-squared:  0.3672,	Adjusted R-squared:  0.2556 
+# F-statistic: 3.289 on 3 and 17 DF,  p-value: 0.04613
+
+## Still a low influence for both metrics! '
+
+### Now visualize
+
+ggplot(effort, aes(n_positions, area, color = species)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  xlab("Number of positions") + 
+  ylab("Homerange area (hectares)")+ 
+  ggtitle("Influence of the number of positions on size of home range") +
+  theme_bw()
+
+ggplot(effort, aes(n_nights, area, color = species)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  xlab("Number of nights tracked") + 
+  ylab("Homerange area (hectares)")+ 
+  ggtitle("Influence of the number of nights tracked on size of home range") +
+  theme_bw()
+
+### Interpretation
+
+### More influence on MBRA than on MMYS for both metrics however - this a very wide spread 
+
+
+### Suggested phrasing from Sikt: 
+# We evaluated whether home-range area estimates were sensitive to tracking effort by modeling estimated area as a function of number of locations and number of nights tracked, including species as a covariate. 
 
 
 ```
@@ -948,182 +1022,120 @@ loo_stability <- loo_long %>%
 # SIKT interpretation:
 
 # The leave-one-individual-out analysis indicates that the model is highly robust to the removal of any single bat. For all predictors, the LOO means were nearly identical to the full-model estimates, and the sign of each coefficient was unchanged across all iterations. Among the covariates, gap3.mean.area and D0 showed somewhat greater variation than the other terms, but overall the model appears very stable.
-
  
  
 ```
 
 
 
-
+## Now re-run the RSF with a random slope instead of a random intercept for Bat ID
+Testing how much individuals influence the model 
 ```{r}
 
-############# Sensitivity checks ####################
+# Try random slope with D0 
+bigfit_d0<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 + D0 | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
 
-### Home range size first 
+# Try random slope with the gap variable 
+bigfit_gap<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  gap3.mean.area | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
 
-Brandts_ranges$species <- "M.brandtii"
-Mystacinus_ranges$species <- "M.mystacinus"
+# Try random slope with the distance to water variable
+bigfit_H20<- lme4::glmer(
+  used ~ Species + 
+    gap3.mean.area + 
+    D0 + Hsd + water.distance +
+    Species * gap3.mean.area + 
+    Species * D0 + 
+    Species * Hsd + 
+    (1 +  water.distance | BatID),
+  data = dt1,
+  family = binomial(link = "logit"),
+  nAGQ = 0
+)
 
-BHR <- rbind(Brandts_ranges, Mystacinus_ranges)
-#21 of 3 - sweet 
+# summary(bigfit_H20)
+# (Intercept)                        -3.02071    0.14238 -21.215  < 2e-16 ***
+# SpeciesM.mystacinus                 0.27809    0.18364   1.514 0.129941    
+# gap3.mean.area                     -0.52485    0.07611  -6.896 5.34e-12 ***
+# D0                                 -0.28902    0.07462  -3.873 0.000107 ***
+# Hsd                                 0.30798    0.04966   6.201 5.60e-10 ***
+# water.distance                     -0.90175    0.18059  -4.993 5.94e-07 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.33266    0.10455   3.182 0.001464 ** 
+# SpeciesM.mystacinus:D0              0.50640    0.10080   5.024 5.06e-07 ***
+# SpeciesM.mystacinus:Hsd             0.06735    0.06920   0.973 0.330427   
 
 
-temp <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/BatsMeta.xlsx")
+summary(bigfit2)
 
-names(temp)
+BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
+#            df      BIC
+# bigfit2    10 9640.403
+# bigfit_d0  12 9605.392
+# bigfit_gap 12 9566.138
+# bigfit_H20 12 9297.663
 
-effort <- temp %>% 
-  dplyr::select(BatID, HRha, Fixes, DaysTracked, Species) %>% 
-  rename(n_nights = DaysTracked,
-         n_positions = Fixes, 
-         area = HRha,
-         species = Species) %>% 
-  mutate(BatID = factor(BatID),
-         species = factor(species)) %>% 
-  dplyr::filter(BatID != "Cecilia") %>% 
-  droplevels()
 
-summary(effort)
+## Lower BIC = better (context still matters) 
+bic_tab <- BIC(bigfit2, bigfit_d0, bigfit_gap, bigfit_H20)
+bic_tab$delta_BIC <- bic_tab$BIC - min(bic_tab$BIC)
+bic_tab[order(bic_tab$BIC), ]
 
-temp <- effort %>% dplyr::select(BatID, area, n_nights, n_positions)
+#            df      BIC delta_BIC
+# bigfit_H20 12 9297.663    0.0000
+# bigfit_gap 12 9566.140  268.4750
+# bigfit_d0  12 9605.394  307.7389
+# bigfit2    10 9640.403  342.7405
 
-### Now include the HR size and n points as columns to the larger RSF dataset 
-dt2 <- left_join(dt1, temp)
-summary(dt2)
-# Looking good!! 
-
-## Now the effort dataset - with the number of nights and the number of points for each individuals 
-
-stest <- lm(log(area) ~ species + log(n_positions) + log(n_nights), data = effort)
-summary(stest)
-
-# Residuals:
-#      Min       1Q   Median       3Q      Max 
-# -2.77717 -0.57034 -0.06847  0.62102  1.85620 
+# Common rough guidelines:
 # 
-# Coefficients:
-#                     Estimate Std. Error t value Pr(>|t|)  
-# (Intercept)           4.0255     1.6737   2.405   0.0278 *
-# speciesM.mystacinus  -1.1020     0.5712  -1.929   0.0706 .
-# log(n_positions)     -0.3020     0.5020  -0.602   0.5554  
-# log(n_nights)         1.2907     0.9302   1.388   0.1832  
+# 0–2: little difference in support
+# 2–6: some evidence against the larger-BIC model
+# 6–10: strong evidence against it
+# >10: very strong evidence against it
+# So usually you choose the model with the lowest BIC, then interpret how much worse the others are via ΔBIC.
+
+## Compare H20 model with OG big fit
+
+anova(bigfit2, bigfit_H20, test = "Chisq")
+#            npar    AIC    BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    
+# bigfit2      10 9563.3 9640.4 -4771.6    9543.3                         
+# bigfit_H20   12 9205.1 9297.7 -4590.6    9181.1 362.17  2  < 2.2e-16 ***
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## Treating distance to water as a random slope has a significant improvement on the model 
 # 
-# Residual standard error: 1.165 on 17 degrees of freedom
-# Multiple R-squared:  0.3766,	Adjusted R-squared:  0.2665 
-# F-statistic: 3.423 on 3 and 17 DF,  p-value: 0.04105
-
-## Alternative 
-
-stest1 <- lm(log(area) ~ species * log(n_positions) + species * log(n_nights), data = effort)
-
-summary(stest1)
-# Residuals:
-#      Min       1Q   Median       3Q      Max 
-# -2.45104 -0.39529 -0.07701  0.46841  1.82507 
 # 
-# Coefficients:
-#                                      Estimate Std. Error t value Pr(>|t|)  
-# (Intercept)                            8.8811     4.8998   1.813    0.090 .
-# speciesM.mystacinus                   -6.7849     5.1603  -1.315    0.208  
-# log(n_positions)                      -1.5001     0.9885  -1.517    0.150  
-# log(n_nights)                          1.4053     2.1171   0.664    0.517  
-# speciesM.mystacinus:log(n_positions)   1.5835     1.1507   1.376    0.189  
-# speciesM.mystacinus:log(n_nights)     -0.5245     2.3707  -0.221    0.828  
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 1.163 on 15 degrees of freedom
-# Multiple R-squared:  0.4521,	Adjusted R-squared:  0.2694 
-# F-statistic: 2.475 on 5 and 15 DF,  p-value: 0.07961
-
-## Higher R value for tht second model and I think that the structure of the model is more ecologically meaningful - with interactions between species and each effor metric. 
-
-## Interpreation - basically, seems to be very little influence overall. 
-
-## Check for collinearity 
-
-cor(effort$n_positions, effort$n_nights)
-# 0.6568861 
-# That is pretty high ... so I will fit separate models for each effort metric 
-
-stest2 <- lm(log(area) ~ species * log(n_positions), data = effort)
-
-summary(stest2)
-# Residuals:
-#      Min       1Q   Median       3Q      Max 
-# -2.65112 -0.54310  0.09984  0.58401  1.61207 
-# 
-# Coefficients:
-#                                      Estimate Std. Error t value Pr(>|t|)  
-# (Intercept)                           10.7955     3.8575   2.799   0.0123 *
-# speciesM.mystacinus                   -8.6159     4.1660  -2.068   0.0542 .
-# log(n_positions)                      -1.2739     0.9037  -1.410   0.1767  
-# speciesM.mystacinus:log(n_positions)   1.7143     0.9841   1.742   0.0996 .
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 1.132 on 17 degrees of freedom
-# Multiple R-squared:  0.4111,	Adjusted R-squared:  0.3071 
-# F-statistic: 3.955 on 3 and 17 DF,  p-value: 0.02617
-
-stest3 <- lm(log(area) ~ species * log(n_nights), data = effort)
-summary(stest3)
-# Residuals:
-#      Min       1Q   Median       3Q      Max 
-# -2.95586 -0.43259 -0.06082  0.61036  1.75639 
-# 
-# Coefficients:
-#                                   Estimate Std. Error t value Pr(>|t|)
-# (Intercept)                         4.7741     4.1232   1.158    0.263
-# speciesM.mystacinus                -2.5364     4.3189  -0.587    0.565
-# log(n_nights)                       0.2979     2.0061   0.148    0.884
-# speciesM.mystacinus:log(n_nights)   0.6938     2.1353   0.325    0.749
-# 
-# Residual standard error: 1.174 on 17 degrees of freedom
-# Multiple R-squared:  0.3672,	Adjusted R-squared:  0.2556 
-# F-statistic: 3.289 on 3 and 17 DF,  p-value: 0.04613
-
-## Still a low influence for both metrics! '
-
-### Now visualize
-
-ggplot(effort, aes(n_positions, area, color = species)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = TRUE) +
-  xlab("Number of positions") + 
-  ylab("Homerange area (hectares)")+ 
-  ggtitle("Influence of the number of positions on size of home range") +
-  theme_bw()
-
-ggplot(effort, aes(n_nights, area, color = species)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = TRUE) +
-  xlab("Number of nights tracked") + 
-  ylab("Homerange area (hectares)")+ 
-  ggtitle("Influence of the number of nights tracked on size of home range") +
-  theme_bw()
-
-### Interpretation
-
-### More influence on MBRA than on MMYS for both metrics however - this a very wide spread 
-
-
-### Suggested phrasing from Sikt: 
-# We evaluated whether home-range area estimates were sensitive to tracking effort by modeling estimated area as a function of number of locations and number of nights tracked, including species as a covariate. 
-
-# =============================================================================
-#   EFFORT SENSITIVITY CHECK
-# =============================================================================
-
-
+# Compared with bigfit2, the model bigfit_H20 had substantially lower BIC (9297.7 vs. 9640.4) and provided a significantly better fit to the data (likelihood ratio test: χ² = 362.17, df = 2, p < 2.2 × 10⁻¹⁶). Thus, bigfit_H20 was strongly supported over bigfit2.
 
 
 ```
 
 
+### Notes on new model
+bifit2_H20 fits our data well but does not take home range directly into consideration. 
+Now lets try a new version of this model which accounts for homerange size as an offset 
 
 ## Katrine's further recommendations
 GLM
@@ -1154,34 +1166,833 @@ bigfit_H20<- lme4::glmer(
   nAGQ = 0
 )
 
+
 ```{r}
-# summary(dt1)
-# summary(BHR)
-# BHR <- BHR |> mutate(BatID = factor(id)) 
-# dt2 <- full_join(dt1, BHR)
 
-# summary(dt2)
-# summary(dt2$BatID)
+names(dt2)
+summary(dt2)
+# Use the dt2 dataset that includes home range size
+# Use the bigfit_H20 model as a point of departure
+# but now with homerange size as an offset variable 
 
+dt2$scalehomerange <- scale(dt2$area)
 
-## START HERE - FIX MERGING HR SIZE WITH BAT ID/SPECIES 
-
-# Prob.use ~ D0 + homerange size + D0*homerange size + Species + (1 + BatID), data=dt1,           
-# family=binomial(link="logit"),nAGQ = 0)
-### Some additional tests of different models  
-bigfit_test <- lme4::glmer(
-  used ~ Species + 
-    gap3.mean.area + 
+bigfit_H20_offset<- lme4::glmer(
+  used ~ Species +
+    gap3.mean.area +
     D0 + Hsd + water.distance +
-    Species * gap3.mean.area + 
-    Species * D0 + 
-    Species * Hsd + 
+    Species * gap3.mean.area +
+    Species * D0 +
+    Species * Hsd +
+    offset(scalehomerange) + 
     (1 +  water.distance | BatID),
-  data = dt1,
+  data = dt2,
   family = binomial(link = "logit"),
-  nAGQ = 0
-)
-  
-  
+  nAGQ = 0) 
+
+
+summary(bigfit_H20_offset)
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    9235.0    9327.6   -4605.5    9211.0     16510 
+# 
+# Scaled residuals: 
+#    Min     1Q Median     3Q    Max 
+# -1.072 -0.358 -0.255 -0.160 36.108 
+# 
+# Random effects:
+#  Groups Name           Variance Std.Dev. Corr 
+#  BatID  (Intercept)    0.8345   0.9135        
+#         water.distance 0.7595   0.8715   0.41 
+# Number of obs: 16522, groups:  BatID, 21
+# 
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -3.75011    0.30142 -12.441  < 2e-16 ***
+# SpeciesM.mystacinus                 1.37795    0.38151   3.612 0.000304 ***
+# gap3.mean.area                     -0.50760    0.07633  -6.650 2.93e-11 ***
+# D0                                 -0.28484    0.07491  -3.802 0.000143 ***
+# Hsd                                 0.31798    0.04981   6.384 1.72e-10 ***
+# water.distance                     -0.93841    0.20029  -4.685 2.80e-06 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.31212    0.10479   2.979 0.002896 ** 
+# SpeciesM.mystacinus:D0              0.50649    0.10129   5.001 5.72e-07 ***
+# SpeciesM.mystacinus:Hsd             0.05606    0.06947   0.807 0.419639    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) SpcsM. gp3.m. D0     Hsd    wtr.ds SM.:3. SM.:D0
+# SpcsM.mystc -0.722                                                 
+# gap3.mean.r  0.001  0.004                                          
+# D0           0.011 -0.009  0.715                                   
+# Hsd         -0.039  0.037  0.256  0.054                            
+# water.dstnc  0.306 -0.021  0.018  0.000  0.031                     
+# SpcsM.m:3..  0.002  0.017 -0.728 -0.521 -0.186 -0.005              
+# SpcsM.my:D0 -0.015  0.015 -0.529 -0.740 -0.040 -0.021  0.721       
+# SpcsM.mys:H  0.035 -0.044 -0.183 -0.038 -0.716  0.001  0.246  0.092
+
+
+install.packages("performance")
+
+library(performance)
+
+# r2(bigfit_H20_offset)
+#   Conditional R2: 0.506
+#      Marginal R2: 0.267
+
+
+### Compare with our previous strongest model
+anova(bigfit_H20, bigfit_H20_offset, test = "Chisq")
+# Can't compare because they are not fit the same dataobject!
+# dt1 is used in bigfit2 and bigfit_H20 (no home range information) 
+# Well. Lets just rerun bigfit_H20 with dt2 so we can compare. 
+
+ bigfit_H202<- lme4::glmer(
+   used ~ Species + 
+     gap3.mean.area + 
+     D0 + Hsd + water.distance +
+     Species * gap3.mean.area + 
+     Species * D0 + 
+     Species * Hsd + 
+     (1 +  water.distance | BatID),
+   data = dt2,
+   family = binomial(link = "logit"),
+   nAGQ = 0)
+ 
+
+anova(bigfit_H202, bigfit_H20_offset, test = "Chisq")
+#                   npar    AIC    BIC  logLik -2*log(L) Chisq Df Pr(>Chisq)
+# bigfit_H202         12 9205.1 9297.7 -4590.6    9181.1                    
+# bigfit_H20_offset   12 9235.0 9327.6 -4605.5    9211.0     0  0    
+
+# the new model has the lower AIC score 
+
+
+# Export the model summary table 
+sjPlot::tab_model(bigfit_H20_offset, transform = NULL, auto.label = FALSE, show.re.var = TRUE,   show.fstat = TRUE, show.stat = TRUE) 
+
 
 ```
+
+
+
+### Now run the model diagnostics for the new model 
+
+```{r}
+### Model diagnostics for 
+simulationOutput <- DHARMa::simulateResiduals(fittedModel = bigfit_H20_offset, plot = T)
+### Help with interpretation of residuals vs. predicted: 
+# https://stats.stackexchange.com/questions/449208/diagnostic-plot-residual-vs-predicted-of-a-glmm-using-dharma
+### recalculateResiduals()
+# KS test -  the p-value shows you that there is *not* a significant deviation from the assumed distribution
+# Dispersion test – Not over or underdispersed
+# Outlier – No indication of outliers 
+# 
+# Unfortunately there is a pattern for the residuals vs predicted test
+
+DHARMa::testDispersion(simulationOutput)
+# 
+# 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
+# 	simulated
+# 
+# data:  simulationOutput
+# ratioObsSim = 0.99999, p-value = 0.984
+# alternative hypothesis: two.sided
+# no strong evidence for Dispersion issues 
+
+DHARMa::testZeroInflation(simulationOutput)
+# 	DHARMa zero-inflation test via comparison to expected zeros with simulation
+# 	under H0 = fitted model
+# 
+# data:  simulationOutput
+# ratioObsSim = 1, p-value = 0.984
+# alternative hypothesis: two.sided
+# No strong evidence for zero inflation
+
+DHARMa::testQuantiles(simulationOutput)
+# 	Test for location of quantiles via qgam
+# 
+# 	Test for location of quantiles via qgam
+# 
+# data:  dd[x, ]
+# D = 0.057675, p-value = 0.6017
+# alternative hypothesis: two-sided
+
+DHARMa::testCategorical(simulationOutput, catPred = dt1$BatID)
+## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+#$homogeneity
+# Levene's Test for Homogeneity of Variance (center = median)
+#          Df F value Pr(>F)
+# group    20  1.1326 0.3063
+#       16501  
+
+DHARMa::testCategorical(simulationOutput, catPred = dt1$Species)
+## No bat species had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+# $homogeneity
+# Levene's Test for Homogeneity of Variance (center = median)
+#          Df F value Pr(>F)
+# group     1  1.8986 0.1683
+      # 16520    
+
+             
+library(car)
+vif(bigfit_H20_offset)
+
+        #        Species         gap3.mean.area                     D0                    Hsd 
+        #       1.004162               4.769672               4.698678               2.233238 
+        # water.distance Species:gap3.mean.area             Species:D0            Species:Hsd 
+        #       1.006084               4.715353               4.703549               2.185040 
+
+# Previous h20 model (no offset)
+        #        Species         gap3.mean.area                     D0                    Hsd 
+        #       1.016827               4.817767               4.757118               2.239761 
+        # water.distance Species:gap3.mean.area             Species:D0            Species:Hsd 
+        #       1.008159               4.792060               4.774078               2.196397
+
+### All these values are lower than the previous full model (bigfit2)
+## Old model 
+            #    Species         gap3.mean.area                     D0 
+            #   1.093962               5.201610               5.476647 
+            #        Hsd         water.distance Species:gap3.mean.area 
+            #   2.125315               1.171877               5.317849 
+            # Species:D0            Species:Hsd 
+            #   5.645544               2.141335 
+
+
+# Higher VIF values for interacting terms is not too much of a concern 
+```
+
+
+
+## Plot the predictions! 
+```{r}
+# pallet
+batcolors = c("#32A5FF", "#011f4b") 
+
+# New facet label names for supp variable
+supp.labs <- c("M. brandtii", "M. mystacinus")
+names(supp.labs) <- c("M.brandtii", "M.mystacinus")
+
+
+## Alternative approach for visualizing the predictions
+
+library(ggeffects)
+
+## gap3.mean.area
+pred_g <- ggeffects::ggpredict(bigfit_H20_offset, terms = c("gap3.mean.area [all]", "Species"))
+gg_pred_g <- plot(pred_g, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "", x = "Mean gap area") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_g
+
+## water.distance
+pred_w <- ggeffects::ggpredict(bigfit_H20_offset, terms = c("water.distance [all]", "Species"))
+gg_pred_w <- plot(pred_w, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "", x = "Distance to water") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_w
+
+## D0
+pred_d <- ggeffects::ggpredict(bigfit_H20_offset, terms = c("D0 [all]", "Species"))
+gg_pred_d <- plot(pred_d, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_d
+
+## Hsd
+pred_h <- ggeffects::ggpredict(bigfit_H20_offset, terms = c("Hsd [all]", "Species"))
+gg_pred_h <- plot(pred_h, colors = batcolors, line_size = 1) + 
+  labs(title = "", y = "") + 
+  theme(legend.position = "none",
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold"))
+gg_pred_h
+
+library(ggeffects)
+library(ggplot2)
+library(cowplot)
+
+class()
+
+combined <- cowplot::plot_grid(gg_pred_g, gg_pred_w, gg_pred_d, gg_pred_h, ncol = 2)
+
+title <- ggdraw() +
+  draw_label(
+    "Predicted use of habitat",
+    fontface = "bold",
+    size = 16,
+    x = 0.5,
+    hjust = 0.5
+  )
+
+fig3 <- plot_grid(
+  title, combined,
+  ncol = 1,
+  rel_heights = c(0.1, 1)
+)
+
+fig3
+
+output_today
+
+ggsave(path = output_today, filename = "Fig3_RSFv3.tiff", width = 10, height = 7, device='tiff', dpi=600)
+
+```
+
+## Rerun the Cook's distance, LOO, DFBETAS  tests 
+
+```{r}
+
+## Further troubleshoot the model to test the robustness
+# How much does a single individual influence the outcome of the model? 
+
+# library(pkgconfig)
+# # or
+# require(pkgconfig)
+# remove.packages("pkgconfig")
+# install.packages("pkgconfig", dependencies = TRUE)
+# update.packages(ask = FALSE, checkBuilt = TRUE)
+
+# =============================================================================
+#  COOK'S DISTANCE AND DFBETAS (influence.ME)
+# =============================================================================
+# This refits the model n times, dropping one individual per iteration.
+# Can be slow for large datasets; set parallel = TRUE if using a cluster.
+
+infl <- influence(bigfit_H20_offset, group = "BatID")
+cd <- cooks.distance(infl)
+
+cd_df <- data.frame(
+  BatID = rownames(cd),
+  cooks_distance = as.numeric(cd)
+)
+
+cd_df
+#       BatID cooks_distance
+# 1    Amelia     0.04997683
+# 2    Aricia     0.29346850
+# 3    Astrid     0.09447132
+# 4     Dagny     0.66180426
+# 5     Daisy     0.25872491
+# 6     Ethel     0.18745067
+# 7       Ida     0.24141973
+# 8      Kaja     0.02783826
+# 9      Line     0.17589815
+# 10   Louise     0.31372778
+# 11    Maren     1.14401200
+# 12    Marie     0.17579181
+# 13     Nora     0.04089827
+# 14   Phoebe     0.48798478
+# 15 Ragnhild     0.13160957
+# 16    Reeda     0.40906280
+# 17    Sofia     0.14955108
+# 18   Steffi     0.17193955
+# 19    Stine     0.50450708
+# 20     Thea     0.91609715
+# 21    Turid     0.01176761
+
+## in general much lower than the previous model
+
+# bigfit2 (old model)
+#       BatID cooks_distance
+# 1    Amelia    0.087254669
+# 2    Aricia    0.466942487
+# 3    Astrid    0.278351495
+# 4     Dagny    0.645118904
+# 5     Daisy    0.302865800
+# 6     Ethel    0.644116758
+# 7       Ida    0.329554532
+# 8      Kaja    0.116871787
+# 9      Line    0.210178012
+# 10   Louise    0.518241172
+# 11    Maren    1.476387292
+# 12    Marie    0.173244284
+# 13     Nora    0.156122941
+# 14   Phoebe    0.179989711
+# 15 Ragnhild    0.121511521
+# 16    Reeda    0.311126351
+# 17    Sofia    0.213415269
+# 18   Steffi    0.151305957
+# 19    Stine    0.532828146
+# 20     Thea    4.550412472
+# 21    Turid    0.007731942
+
+               
+        summary(dt2)
+
+# --- Cook's distance ---
+cook_d <- cooks.distance(infl)
+cook_df <- data.frame(
+  individual_id = rownames(cook_d),
+  cooks_d       = as.numeric(cook_d),
+  species       = dt2 |>
+    distinct(BatID, Species) |>
+    arrange(BatID) |>
+    pull(Species)
+)
+
+cook_df
+
+# Threshold: common rule of thumb is 4/n (conservative) or visual inspection
+threshold_cook <- 4 / 21
+
+p_cook <- ggplot2::ggplot(cook_df, ggplot2::aes(x = reorder(individual_id, cooks_d),
+                               y = cooks_d, fill = species)) +
+  ggplot2::geom_col() +
+  ggplot2::geom_hline(yintercept = threshold_cook, linetype = "dashed", colour = "red") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
+    title = "Cook's distance by individual",
+    subtitle = paste0("Dashed line = 4/n threshold (", round(threshold_cook, 3), ")"),
+    x = NULL, y = "Cook's D"
+  ) +
+  ggplot2::theme_bw()
+
+
+print(p_cook)
+#ggsave("cooks_distance.png", p_cook, width = 7, height = 5, dpi = 300)
+
+
+temp <- dt2 %>% mutate(individual_id = BatID, 
+                       species = Species) 
+# --- DFBETAS ---
+dfb <- dfbetas(infl)
+dfb_df <- as.data.frame(dfb) |>
+  dplyr::mutate(individual_id = rownames(dfb)) |>
+  tidyr::pivot_longer(-individual_id, names_to = "coefficient", values_to = "dfbeta") |>
+  dplyr::left_join(dplyr::distinct(temp, individual_id, species), by = "individual_id")
+
+# DFBETAS threshold: |DFBETAS| > 2/sqrt(n)
+threshold_dfb <- 2 / sqrt(21)
+
+p_dfb <- ggplot2::ggplot(dfb_df, ggplot2::aes(x = reorder(individual_id, abs(dfbeta)),
+                              y = dfbeta, colour = species)) +
+  ggplot2::geom_point(size = 2) +
+  ggplot2::geom_hline(yintercept =  threshold_dfb, linetype = "dashed", colour = "red") +
+  ggplot2::geom_hline(yintercept = -threshold_dfb, linetype = "dashed", colour = "red") +
+  ggplot2::facet_wrap(~ coefficient, scales = "free_y") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
+    title = "DFBETAS by individual and coefficient",
+    subtitle = paste0("Dashed lines = ±2/√n threshold (±", round(threshold_dfb, 3), ")"),
+    x = NULL, y = "DFBETAS"
+  ) +
+  ggplot2::theme_bw(base_size = 9)
+
+print(p_dfb)
+#ggsave("dfbetas.png", p_dfb, width = 10, height = 7, dpi = 300)
+
+
+# =============================================================================
+#  LEAVE-ONE-OUT (LOO) JACKKNIFE BY INDIVIDUAL
+# =============================================================================
+# Refit model dropping one individual at a time; record fixed-effect estimates.
+
+ # bigfit_H20_offset <- lme4::glmer(
+ #   used ~ Species + 
+ #     gap3.mean.area + 
+ #     D0 + Hsd + water.distance +
+ #     Species * gap3.mean.area + 
+ #     Species * D0 + 
+ #     Species * Hsd + 
+#      offset(scalehomerange) + 
+ #     (1 +  water.distance | BatID),
+ #   data = dt2,
+ #   family = binomial(link = "logit"),
+ #   nAGQ = 0)
+
+
+str(temp)
+dat <- temp
+
+individuals <- unique(dat$individual_id)
+
+loo_results <- lapply(individuals, function(id) {
+  dat_sub <- filter(dat, individual_id != id)
+  m_loo <- tryCatch(
+    glmer(
+      used ~ Species + gap3.mean.area + 
+                    D0 + Hsd + water.distance +
+                    Species*gap3.mean.area + 
+                    Species*D0 + 
+                    Species*Hsd + 
+             offset(scalehomerange) + 
+             (1 + water.distance | individual_id),
+      data   = dat_sub,
+      family = binomial(link = "logit"),
+      control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(m_loo)) return(NULL)
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_individual <- id
+  coef_df$dropped_species    <- dat |>
+    filter(individual_id == id) |>
+    pull(species) |>
+    unique()
+  coef_df
+}) |>
+  bind_rows()
+
+# Full-model estimates for reference line
+full_coefs <- data.frame(t(fixef(bigfit_H20_offset)))
+full_coefs$dropped_individual <- "FULL MODEL"
+full_coefs$dropped_species    <- NA
+
+# Combine and reshape
+loo_long <- bind_rows(loo_results, full_coefs) |>
+  tidyr::pivot_longer(
+    cols      = -c(dropped_individual, dropped_species),
+    names_to  = "coefficient",
+    values_to = "estimate"
+  )
+
+
+library(ggplot2)
+# Plot: one panel per coefficient, each point is the LOO estimate
+p_loo <- loo_long |>
+  filter(dropped_individual != "FULL MODEL") |>
+  ggplot2::ggplot(aes(x = reorder(dropped_individual, estimate),
+             y = estimate, colour = dropped_species)) +
+  ggplot2::geom_point(size = 2) +
+  ggplot2::geom_hline(
+    data = filter(loo_long, dropped_individual == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed", colour = "black"
+  ) +
+  ggplot2::facet_wrap(~ coefficient, scales = "free") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
+    title   = "LOO jackknife: fixed-effect estimates",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped individual", y = "Estimate (log-odds)",
+    colour = "Species"
+  ) +
+  ggplot2::theme_bw(base_size = 9)
+
+print(p_loo)
+# 1: Removed 84 rows containing missing values or values outside the scale range (`geom_point()`). 
+# 2: Removed 4 rows containing missing values or values outside the scale range (`geom_hline()`). 
+#ggsave("loo_jackknife.png", p_loo, width = 12, height = 8, dpi = 300)
+
+# Summary table: SD of LOO estimates per coefficient (instability measure)
+loo_stability <- loo_long |>
+  filter(dropped_individual != "FULL MODEL") |>
+  group_by(coefficient) |>
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) |>
+  left_join(
+    tidyr::pivot_longer(full_coefs[1, ], -c(dropped_individual, dropped_species),
+                 names_to = "coefficient", values_to = "full_estimate"),
+    by = "coefficient"
+  ) 
+
+print(loo_stability)
+#write.csv(loo_stability, file.path(output_today, "loo_stability_table.csv"), row.names = FALSE)
+
+################################################################################
+######################### Separate for each species ############################
+################################################################################
+# A bit difficult to interpret when the two species are together - I will try again with separate models for each species
+
+mbra <- dt2 %>% dplyr::filter(Species == "M.brandtii") %>% droplevels()
+mmys <- dt2 %>% dplyr::filter(Species == "M.mystacinus") %>% droplevels()
+
+##############################################
+## MBRA ## 
+
+mbrafit =  glmer(used ~  
+                   gap3.mean.area +
+                   D0 + Hsd + water.distance +
+                   (1|BatID), data=mbra,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(mbrafit)
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    4344.3    4385.9   -2166.1    4332.3      7540 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.7425 -0.3564 -0.2698 -0.2009  7.5026 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.01044  0.1022  
+# Number of obs: 7546, groups:  BatID, 9
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.36362    0.05696 -41.495  < 2e-16 ***
+# gap3.mean.area -0.62611    0.07141  -8.768  < 2e-16 ***
+# D0             -0.45869    0.07141  -6.423 1.33e-10 ***
+# Hsd             0.25445    0.04609   5.520 3.39e-08 ***
+# water.distance -0.48900    0.04925  -9.930  < 2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. D0     Hsd   
+# gap3.mean.r  0.050                     
+# D0           0.112  0.733              
+# Hsd         -0.158  0.236  0.068       
+# water.dstnc  0.180  0.187 -0.029  0.234
+
+
+# LOO
+bats <- unique(mbra$BatID)
+
+# Leave-one-individual-out models
+loo_results <- lapply(bats, function(id) {
+  
+  mbra_sub <- mbra %>%
+    filter(BatID != id)
+  
+  m_loo <- tryCatch(
+    glmer(
+      used ~ gap3.mean.area + D0 + Hsd + water.distance + (1 | BatID),
+      data = mbra_sub,
+      family = binomial(link = "logit"),
+      nAGQ = 0
+    ),
+    error = function(e) NULL
+  )
+  
+  if (is.null(m_loo)) return(NULL)
+  
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_BatID <- id
+  coef_df
+}) %>%
+  bind_rows()
+
+
+# Add the full-model coefficients for comparison
+full_coefs <- as.data.frame(t(fixef(mbrafit)))
+full_coefs$dropped_BatID <- "FULL MODEL"
+
+# Reshape to long format
+loo_long <- bind_rows(loo_results, full_coefs) %>%
+  pivot_longer(
+    cols = -dropped_BatID,
+    names_to = "coefficient",
+    values_to = "estimate"
+  )
+
+# Plot the influence of dropping each individual
+p_loo <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  ggplot(aes(x = reorder(dropped_BatID, estimate), y = estimate)) +
+  geom_point(size = 2) +
+  geom_hline(
+    data = loo_long %>% filter(dropped_BatID == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed",
+    colour = "black"
+  ) +
+  facet_wrap(~ coefficient, scales = "free") +
+  coord_flip() +
+  labs(
+    title = "Leave-one-individual-out jackknife",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped BatID",
+    y = "Estimate (log-odds)"
+  ) +
+  theme_bw()
+
+print(p_loo)
+
+
+# Summary table of coefficient stability
+loo_stability <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  group_by(coefficient) %>%
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) %>%
+  left_join(
+    full_coefs %>%
+      pivot_longer(
+        cols = -dropped_BatID,
+        names_to = "coefficient",
+        values_to = "full_estimate"
+      ),
+    by = "coefficient"
+  )
+
+# print(loo_stability)
+#   coefficient    loo_mean loo_sd loo_min loo_max dropped_BatID full_estimate
+#   <chr>             <dbl>  <dbl>   <dbl>   <dbl> <chr>                 <dbl>
+# 1 (Intercept)      -2.38  0.107   -2.66   -2.31  FULL MODEL           -2.36 
+# 2 D0               -0.460 0.146   -0.720  -0.160 FULL MODEL           -0.459
+# 3 Hsd               0.253 0.0492   0.137   0.302 FULL MODEL            0.254
+# 4 gap3.mean.area   -0.628 0.135   -0.858  -0.411 FULL MODEL           -0.626
+# 5 water.distance   -0.506 0.196   -1.01   -0.369 FULL MODEL           -0.489
+
+
+# SIKT interpretation:
+
+# The leave-one-individual-out analysis indicates that fixed-effect estimates are generally robust to the removal of any single bat. The direction of all effects remained unchanged across LOO runs, suggesting qualitative inference is stable. Among predictors, water.distance showed the greatest sensitivity to individual removal, whereas Hsd and the intercept were most stable.
+
+
+### MMYS ###
+
+##############################################
+## MBRA ## 
+
+mmysfit =  glmer(used ~  
+                   gap3.mean.area +
+                   D0 + Hsd + water.distance +
+                   (1|BatID), data=mmys,
+               family=binomial(link="logit"),nAGQ = 0)
+
+summary(mmysfit)
+#       AIC       BIC    logLik -2*log(L)  df.resid 
+#    5222.2    5264.8   -2605.1    5210.2      8970 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.6429 -0.3573 -0.2834 -0.2012  7.7331 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.02626  0.1621  
+# Number of obs: 8976, groups:  BatID, 12
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.57399    0.06957 -37.000   <2e-16 ***
+# gap3.mean.area -0.18833    0.06983  -2.697   0.0070 ** 
+# D0              0.17088    0.06580   2.597   0.0094 ** 
+# Hsd             0.39581    0.04697   8.428   <2e-16 ***
+# water.distance -0.54126    0.05174 -10.462   <2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. D0     Hsd   
+# gap3.mean.r  0.160                     
+# D0          -0.031  0.730              
+# Hsd         -0.159  0.235  0.122       
+# water.dstnc  0.273  0.043 -0.253  0.126
+
+
+# LOO
+bats <- unique(mmys$BatID)
+
+# Leave-one-individual-out models
+loo_results <- lapply(bats, function(id) {
+  
+  mmys_sub <- mmys %>%
+    filter(BatID != id)
+  
+  m_loo <- tryCatch(
+    glmer(
+      used ~ gap3.mean.area + D0 + Hsd + water.distance + (1 | BatID),
+      data = mmys_sub,
+      family = binomial(link = "logit"),
+      nAGQ = 0
+    ),
+    error = function(e) NULL
+  )
+  
+  if (is.null(m_loo)) return(NULL)
+  
+  coef_df <- as.data.frame(t(fixef(m_loo)))
+  coef_df$dropped_BatID <- id
+  coef_df
+}) %>%
+  bind_rows()
+
+
+# Add the full-model coefficients for comparison
+full_coefs <- as.data.frame(t(fixef(mmysfit)))
+full_coefs$dropped_BatID <- "FULL MODEL"
+
+# Reshape to long format
+loo_long <- bind_rows(loo_results, full_coefs) %>%
+  pivot_longer(
+    cols = -dropped_BatID,
+    names_to = "coefficient",
+    values_to = "estimate"
+  )
+
+# Plot the influence of dropping each individual
+p_loo <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  ggplot(aes(x = reorder(dropped_BatID, estimate), y = estimate)) +
+  geom_point(size = 2) +
+  geom_hline(
+    data = loo_long %>% filter(dropped_BatID == "FULL MODEL"),
+    aes(yintercept = estimate),
+    linetype = "dashed",
+    colour = "black"
+  ) +
+  facet_wrap(~ coefficient, scales = "free") +
+  coord_flip() +
+  labs(
+    title = "Leave-one-individual-out jackknife",
+    subtitle = "Dashed line = full-model estimate",
+    x = "Dropped BatID",
+    y = "Estimate (log-odds)"
+  ) +
+  theme_bw()
+
+print(p_loo)
+
+
+# Summary table of coefficient stability
+
+loo_stability <- loo_long %>%
+  filter(dropped_BatID != "FULL MODEL") %>%
+  group_by(coefficient) %>%
+  summarise(
+    loo_mean = mean(estimate, na.rm = TRUE),
+    loo_sd   = sd(estimate, na.rm = TRUE),
+    loo_min  = min(estimate, na.rm = TRUE),
+    loo_max  = max(estimate, na.rm = TRUE),
+    .groups  = "drop"
+  ) %>%
+  left_join(
+    full_coefs %>%
+      pivot_longer(
+        cols = -dropped_BatID,
+        names_to = "coefficient",
+        values_to = "full_estimate"
+      ),
+    by = "coefficient"
+  )
+
+ print(loo_stability)
+#   coefficient    loo_mean loo_sd loo_min loo_max dropped_BatID full_estimate
+#   <chr>             <dbl>  <dbl>   <dbl>   <dbl> <chr>                 <dbl>
+# 1 (Intercept)      -2.58  0.0410 -2.64   -2.51   FULL MODEL           -2.57 
+# 2 D0                0.172 0.0636  0.0637  0.276  FULL MODEL            0.171
+# 3 Hsd               0.395 0.0398  0.331   0.458  FULL MODEL            0.396
+# 4 gap3.mean.area   -0.189 0.0746 -0.328  -0.0970 FULL MODEL           -0.188
+# 5 water.distance   -0.544 0.0565 -0.675  -0.478  FULL MODEL           -0.541
+
+
+# SIKT interpretation:
+
+# The leave-one-individual-out analysis indicates that the model is highly robust to the removal of any single bat. For all predictors, the LOO means were nearly identical to the full-model estimates, and the sign of each coefficient was unchanged across all iterations. Among the covariates, gap3.mean.area and D0 showed somewhat greater variation than the other terms, but overall the model appears very stable.
+ 
+ 
+```
+
+```
+
