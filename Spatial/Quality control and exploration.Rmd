@@ -1074,7 +1074,7 @@ bigfit_H20<- lme4::glmer(
   nAGQ = 0
 )
 
-# summary(bigfit_H20)
+ summary(bigfit_H20)
 # (Intercept)                        -3.02071    0.14238 -21.215  < 2e-16 ***
 # SpeciesM.mystacinus                 0.27809    0.18364   1.514 0.129941    
 # gap3.mean.area                     -0.52485    0.07611  -6.896 5.34e-12 ***
